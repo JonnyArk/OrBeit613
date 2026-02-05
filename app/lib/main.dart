@@ -1,30 +1,23 @@
-/// OrBeit Presentation Layer - Application Entry Point
+/// OrBeit Game - Enhanced Main with Building Selector
 ///
-/// Initializes Firebase, creates the Flame game instance, and
-/// provides the Material app wrapper with UI overlays.
-///
-/// **Architecture:**
-/// - Firebase initialized before app starts
-/// - GameWidget wraps WorldGame for Flame rendering
-/// - UI overlays (buttons, dialogs) built with Flutter widgets
-///
-/// **For Future Agents:**
-/// - Add new UI overlays as siblings to GameWidget in Stack
-/// - Use Riverpod providers for state management
-/// - Theme uses Sovereign Sanctum colors
+/// Updates main.dart to include building selector and task panel toggles.
 
-import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_options.dart';
 import 'game/world_game.dart';
 import 'game/building_component.dart';
+import 'game/building_selector.dart';
 import 'domain/repositories/building_repository.dart';
 import 'data/repositories/building_repository_impl.dart';
 import 'data/database.dart';
 import 'services/ai_interface.dart';
 import 'services/ai_service_impl.dart';
+import 'ui/task_list_panel.dart';
+import 'domain/entities/task_repository.dart';
+import 'data/repositories/task_repository_impl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,9 +26,10 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize database and repository
+  // Initialize database and repositories
   final database = AppDatabase();
   final buildingRepository = BuildingRepositoryImpl(database);
+  final taskRepository = TaskRepositoryImpl(database);
   
   // Initialize AI service
   final aiService = AIServiceImpl();
@@ -45,24 +39,19 @@ void main() async {
       overrides: [
         buildingRepositoryProvider.overrideWithValue(buildingRepository),
         aiServiceProvider.overrideWithValue(aiService),
+        taskRepositoryProvider.overrideWithValue(taskRepository),
       ],
       child: const OrBeitApp(),
     ),
   );
 }
 
-/// Provider for the building repository
-///
-/// Override this in main() with the concrete implementation.
-/// Tests can override with mocks.
+/// Provider for building repository
 final buildingRepositoryProvider = Provider<BuildingRepository>((ref) {
   throw UnimplementedError('Must override in main()');
 });
 
 /// Provider for AI service
-///
-/// Used for generating visual assets and distilling context.
-/// Connects to Firebase Cloud Functions backend.
 final aiServiceProvider = Provider<AIService>((ref) {
   throw UnimplementedError('Must override in main()');
 });
@@ -74,16 +63,14 @@ class OrBeitApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'OrBeit',
+      title: 'OrBeit - Sovereign OS',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD4AF37), // Sovereign Gold
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF1A1A2E), // Dark Slate
-        useMaterial3: true,
+        brightness: Brightness.dark,
+        primaryColor: const Color(0xFFD4AF37),
+        scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
       home: const GameScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -98,6 +85,8 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class _GameScreenState extends ConsumerState<GameScreen> {
   WorldGame? _game;
+  bool _showBuildingSelector = false;
+  bool _showTaskPanel = false;
 
   @override
   Widget build(BuildContext context) {
@@ -108,76 +97,206 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         children: [
           // Game canvas (Flame)
           GameWidget<WorldGame>(
-            game: _game ??= WorldGame(buildingRepository: repository),
+            game: _game ??= WorldGame(repository: repository),
           ),
           
-          // UI Overlays
-          Positioned(
-            bottom: 32,
-            right: 32,
-            child: FloatingActionButton.extended(
-              onPressed: () => _placeHouse(context, repository),
-              backgroundColor: const Color(0xFFD4AF37), // Sovereign Gold
-              icon: const Icon(Icons.home, color: Color(0xFF1A1A2E)),
-              label: const Text(
-                'Place House',
-                style: TextStyle(
-                  color: Color(0xFF1A1A2E),
-                  fontWeight: FontWeight.bold,
-                ),
+          // Building selector panel
+          if (_showBuildingSelector)
+            Positioned(
+              left: 16,
+              top: 100,
+              child: BuildingSelectorPanel(
+                onSelect: (type) => _placeBuilding(type),
+                onClose: () => setState(() => _showBuildingSelector = false),
               ),
             ),
+          
+          // Task panel (right side)
+          if (_showTaskPanel)
+            const Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: TaskListPanel(),
+            ),
+          
+          // Bottom toolbar
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildToolbar(),
           ),
         ],
       ),
     );
   }
 
-  /// Handles building placement
-  ///
-  /// **Clean Architecture Flow:**
-  /// 1. Use case logic (simple for now)
-  /// 2. Call repository to persist
-  /// 3. Notify game to render immediately
-  Future<void> _placeHouse(BuildContext context, BuildingRepository repository) async {
-    try {
-      // For now, place at a random-ish location
-      // TODO: Allow user to tap grid for placement
-      final x = 5.0 + (DateTime.now().millisecond % 5).toDouble();
-      final y = 5.0 + (DateTime.now().millisecond % 3).toDouble();
-      
-      final building = await repository.createBuilding(
-        type: 'farmhouse_white',
-        x: x,
-        y: y,
-        rotation: 0,
-      );
+  Widget _buildToolbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            const Color(0xFF1A1A2E).withAlpha(230),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _ToolbarButton(
+              icon: Icons.home_work,
+              label: 'Build',
+              isActive: _showBuildingSelector,
+              onTap: () => setState(() {
+                _showBuildingSelector = !_showBuildingSelector;
+                _showTaskPanel = false;
+              }),
+            ),
+            const SizedBox(width: 24),
+            _ToolbarButton(
+              icon: Icons.task_alt,
+              label: 'Tasks',
+              isActive: _showTaskPanel,
+              onTap: () => setState(() {
+                _showTaskPanel = !_showTaskPanel;
+                _showBuildingSelector = false;
+              }),
+            ),
+            const SizedBox(width: 24),
+            _ToolbarButton(
+              icon: Icons.auto_awesome,
+              label: 'AI',
+              onTap: _showAIDialog,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-      // Add to game immediately without restart
-      if (_game != null) {
-        _game!.addBuilding(BuildingComponent(building: building));
-      }
+  Future<void> _placeBuilding(BuildingType type) async {
+    final repository = ref.read(buildingRepositoryProvider);
+    
+    // Place at center of visible grid (simplified)
+    final building = await repository.createBuilding(
+      type: type.id,
+      x: 200.0 + (_game?.children.length ?? 0) * 50,
+      y: 200.0 + (_game?.children.length ?? 0) * 30,
+    );
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('House placed at (${building.x.toStringAsFixed(1)}, ${building.y.toStringAsFixed(1)})'),
-            backgroundColor: const Color(0xFF134E5E), // Deep Teal
-            duration: const Duration(seconds: 2),
+    // Add component to game
+    _game?.add(BuildingComponent(building: building));
+    
+    setState(() => _showBuildingSelector = false);
+  }
+
+  void _showAIDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Color(0xFFD4AF37)),
+            const SizedBox(width: 12),
+            const Text('AI Assistant', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your AI assistant is ready to help you:',
+              style: TextStyle(color: Colors.white.withAlpha(200)),
+            ),
+            const SizedBox(height: 16),
+            _AIFeatureRow(icon: Icons.image, text: 'Generate building sprites'),
+            _AIFeatureRow(icon: Icons.psychology, text: 'Distill life context'),
+            _AIFeatureRow(icon: Icons.analytics, text: 'Track credit usage'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
-        );
-      }
+        ],
+      ),
+    );
+  }
+}
 
-      print('Building created: $building');
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to place house: $e'),
-            backgroundColor: Colors.red,
+class _ToolbarButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isActive;
+
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isActive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive 
+            ? const Color(0xFFD4AF37).withAlpha(50)
+            : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? const Color(0xFFD4AF37) : Colors.white24,
           ),
-        );
-      }
-    }
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isActive ? const Color(0xFFD4AF37) : Colors.white70),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? const Color(0xFFD4AF37) : Colors.white70,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AIFeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _AIFeatureRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF134E5E)),
+          const SizedBox(width: 8),
+          Text(text, style: const TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
   }
 }
