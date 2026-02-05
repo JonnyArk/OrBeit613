@@ -97,7 +97,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         children: [
           // Game canvas (Flame)
           GameWidget<WorldGame>(
-            game: _game ??= WorldGame(repository: repository),
+            game: _game ??= WorldGame(buildingRepository: repository),
           ),
           
           // Building selector panel
