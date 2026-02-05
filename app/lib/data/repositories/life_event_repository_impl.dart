@@ -1,84 +1,109 @@
+/// OrBeit Data Layer - Life Events Repository Implementation
+///
+/// Drift-based implementation for life event persistence.
+/// Handles purchases, appointments, milestones, and memories.
+
 import 'package:drift/drift.dart';
-import '../../domain/entities/life_event.dart' as domain;
-import '../../domain/repositories/life_event_repository.dart';
 import '../database.dart';
 
-/// Drift-based implementation of [LifeEventRepository].
-///
-/// Bridges the domain layer with the Drift database,
-/// converting between database models and domain entities.
+/// Types of life events
+enum LifeEventType { purchase, appointment, milestone, memory }
+
+/// Domain entity for a Life Event
+class LifeEvent {
+  final int id;
+  final LifeEventType eventType;
+  final String title;
+  final String? description;
+  final String? locationLabel;
+  final DateTime occurredAt;
+  final Map<String, dynamic>? metadata;
+  final DateTime createdAt;
+
+  const LifeEvent({
+    required this.id,
+    required this.eventType,
+    required this.title,
+    this.description,
+    this.locationLabel,
+    required this.occurredAt,
+    this.metadata,
+    required this.createdAt,
+  });
+}
+
+/// Repository for life events
+abstract class LifeEventRepository {
+  Future<List<LifeEvent>> getAllEvents();
+  Future<List<LifeEvent>> getEventsByType(LifeEventType type);
+  Future<List<LifeEvent>> getEventsInRange(DateTime start, DateTime end);
+  Future<LifeEvent> createEvent({
+    required LifeEventType eventType,
+    required String title,
+    String? description,
+    String? locationLabel,
+    required DateTime occurredAt,
+    Map<String, dynamic>? metadata,
+  });
+  Future<bool> deleteEvent(int id);
+}
+
+/// Drift implementation of LifeEventRepository
 class LifeEventRepositoryImpl implements LifeEventRepository {
   final AppDatabase _database;
 
   LifeEventRepositoryImpl(this._database);
 
   @override
-  Future<List<domain.LifeEvent>> getAllEvents() async {
+  Future<List<LifeEvent>> getAllEvents() async {
+    final rows = await (_database.select(_database.lifeEvents)
+      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]))
+      .get();
+    return rows.map((row) => _toDomain(row)).toList();
+  }
+
+  @override
+  Future<List<LifeEvent>> getEventsByType(LifeEventType type) async {
+    final typeStr = _typeToString(type);
     final query = _database.select(_database.lifeEvents)
-      ..orderBy([
-        (e) => OrderingTerm(expression: e.occurredAt, mode: OrderingMode.desc),
-      ]);
+      ..where((t) => t.eventType.equals(typeStr))
+      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]);
     final rows = await query.get();
-    return rows.map(_toDomainEvent).toList();
+    return rows.map((row) => _toDomain(row)).toList();
   }
 
   @override
-  Future<List<domain.LifeEvent>> getEventsByType(String eventType) async {
+  Future<List<LifeEvent>> getEventsInRange(DateTime start, DateTime end) async {
     final query = _database.select(_database.lifeEvents)
-      ..where((e) => e.eventType.equals(eventType))
-      ..orderBy([
-        (e) => OrderingTerm(expression: e.occurredAt, mode: OrderingMode.desc),
-      ]);
+      ..where((t) => 
+        t.occurredAt.isBiggerOrEqualValue(start) & 
+        t.occurredAt.isSmallerThanValue(end))
+      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]);
     final rows = await query.get();
-    return rows.map(_toDomainEvent).toList();
+    return rows.map((row) => _toDomain(row)).toList();
   }
 
   @override
-  Future<List<domain.LifeEvent>> getEventsInRange(
-    DateTime start,
-    DateTime end,
-  ) async {
-    final query = _database.select(_database.lifeEvents)
-      ..where((e) =>
-          e.occurredAt.isBiggerOrEqualValue(start) &
-          e.occurredAt.isSmallerOrEqualValue(end))
-      ..orderBy([
-        (e) => OrderingTerm(expression: e.occurredAt, mode: OrderingMode.desc),
-      ]);
-    final rows = await query.get();
-    return rows.map(_toDomainEvent).toList();
-  }
-
-  @override
-  Future<domain.LifeEvent?> getEventById(int id) async {
-    final query = _database.select(_database.lifeEvents)
-      ..where((e) => e.id.equals(id));
-    final row = await query.getSingleOrNull();
-    return row != null ? _toDomainEvent(row) : null;
-  }
-
-  @override
-  Future<domain.LifeEvent> createEvent({
-    required String eventType,
+  Future<LifeEvent> createEvent({
+    required LifeEventType eventType,
     required String title,
     String? description,
     String? locationLabel,
     required DateTime occurredAt,
-    String? metadata,
+    Map<String, dynamic>? metadata,
   }) async {
-    final now = DateTime.now();
     final id = await _database.into(_database.lifeEvents).insert(
       LifeEventsCompanion.insert(
-        eventType: eventType,
+        eventType: _typeToString(eventType),
         title: title,
         description: Value(description),
         locationLabel: Value(locationLabel),
         occurredAt: occurredAt,
-        metadata: Value(metadata),
+        metadata: Value(metadata?.toString()),
       ),
     );
 
-    return domain.LifeEvent(
+    return LifeEvent(
       id: id,
       eventType: eventType,
       title: title,
@@ -86,57 +111,45 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
       locationLabel: locationLabel,
       occurredAt: occurredAt,
       metadata: metadata,
-      createdAt: now,
+      createdAt: DateTime.now(),
     );
-  }
-
-  @override
-  Future<domain.LifeEvent> updateEvent(domain.LifeEvent event) async {
-    await (_database.update(_database.lifeEvents)
-          ..where((e) => e.id.equals(event.id)))
-        .write(
-      LifeEventsCompanion(
-        eventType: Value(event.eventType),
-        title: Value(event.title),
-        description: Value(event.description),
-        locationLabel: Value(event.locationLabel),
-        occurredAt: Value(event.occurredAt),
-        metadata: Value(event.metadata),
-      ),
-    );
-    return event;
   }
 
   @override
   Future<bool> deleteEvent(int id) async {
     final count = await (_database.delete(_database.lifeEvents)
-          ..where((e) => e.id.equals(id)))
+          ..where((t) => t.id.equals(id)))
         .go();
     return count > 0;
   }
 
-  @override
-  Future<List<domain.LifeEvent>> searchEvents(String query) async {
-    final pattern = '%$query%';
-    final dbQuery = _database.select(_database.lifeEvents)
-      ..where((e) => e.title.like(pattern) | e.description.like(pattern))
-      ..orderBy([
-        (e) => OrderingTerm(expression: e.occurredAt, mode: OrderingMode.desc),
-      ]);
-    final rows = await dbQuery.get();
-    return rows.map(_toDomainEvent).toList();
+  LifeEvent _toDomain(dynamic row) {
+    return LifeEvent(
+      id: row.id as int,
+      eventType: _stringToType(row.eventType as String),
+      title: row.title as String,
+      description: row.description as String?,
+      locationLabel: row.locationLabel as String?,
+      occurredAt: row.occurredAt as DateTime,
+      createdAt: row.createdAt as DateTime,
+    );
   }
 
-  domain.LifeEvent _toDomainEvent(LifeEvent row) {
-    return domain.LifeEvent(
-      id: row.id,
-      eventType: row.eventType,
-      title: row.title,
-      description: row.description,
-      locationLabel: row.locationLabel,
-      occurredAt: row.occurredAt,
-      metadata: row.metadata,
-      createdAt: row.createdAt,
-    );
+  String _typeToString(LifeEventType type) {
+    switch (type) {
+      case LifeEventType.purchase: return 'purchase';
+      case LifeEventType.appointment: return 'appointment';
+      case LifeEventType.milestone: return 'milestone';
+      case LifeEventType.memory: return 'memory';
+    }
+  }
+
+  LifeEventType _stringToType(String type) {
+    switch (type) {
+      case 'purchase': return LifeEventType.purchase;
+      case 'appointment': return LifeEventType.appointment;
+      case 'milestone': return LifeEventType.milestone;
+      default: return LifeEventType.memory;
+    }
   }
 }

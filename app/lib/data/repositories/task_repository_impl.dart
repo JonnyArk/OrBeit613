@@ -1,12 +1,14 @@
+/// OrBeit Data Layer - Task Repository Implementation
+///
+/// Drift-based implementation of TaskRepository.
+/// Converts between Drift models and domain entities.
+
 import 'package:drift/drift.dart';
 import '../../domain/entities/task.dart' as domain;
-import '../../domain/repositories/task_repository.dart';
+import '../../domain/entities/task_repository.dart';
 import '../database.dart';
 
-/// Drift-based implementation of [TaskRepository].
-///
-/// Bridges the domain layer with the Drift database,
-/// converting between database models and domain entities.
+/// Drift implementation of TaskRepository
 class TaskRepositoryImpl implements TaskRepository {
   final AppDatabase _database;
 
@@ -14,34 +16,23 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<List<domain.Task>> getAllTasks() async {
-    final query = _database.select(_database.tasks)
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.priority, mode: OrderingMode.desc),
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
-      ]);
-    final rows = await query.get();
+    final rows = await _database.select(_database.tasks).get();
     return rows.map(_toDomainTask).toList();
   }
 
   @override
-  Future<List<domain.Task>> getIncompleteTasks() async {
+  Future<List<domain.Task>> getTasksByStatus(domain.TaskStatus status) async {
+    final statusStr = _statusToString(status);
     final query = _database.select(_database.tasks)
-      ..where((t) => t.completedAt.isNull())
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.priority, mode: OrderingMode.desc),
-        (t) => OrderingTerm(expression: t.dueDate, mode: OrderingMode.asc),
-      ]);
+      ..where((t) => t.completedAt.isNull());
     final rows = await query.get();
-    return rows.map(_toDomainTask).toList();
+    return rows.map(_toDomainTask).where((t) => t.status == status).toList();
   }
 
   @override
-  Future<List<domain.Task>> getTasksByBuilding(int buildingId) async {
+  Future<List<domain.Task>> getTasksForBuilding(int buildingId) async {
     final query = _database.select(_database.tasks)
-      ..where((t) => t.buildingId.equals(buildingId))
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.priority, mode: OrderingMode.desc),
-      ]);
+      ..where((t) => t.buildingId.equals(buildingId));
     final rows = await query.get();
     return rows.map(_toDomainTask).toList();
   }
@@ -58,22 +49,17 @@ class TaskRepositoryImpl implements TaskRepository {
   Future<domain.Task> createTask({
     required String title,
     String? description,
+    domain.TaskPriority priority = domain.TaskPriority.medium,
     int? buildingId,
-    double? gridX,
-    double? gridY,
     DateTime? dueDate,
-    int priority = 1,
   }) async {
-    final now = DateTime.now();
     final id = await _database.into(_database.tasks).insert(
       TasksCompanion.insert(
         title: title,
         description: Value(description),
+        priority: Value(_priorityToInt(priority)),
         buildingId: Value(buildingId),
-        gridX: Value(gridX),
-        gridY: Value(gridY),
         dueDate: Value(dueDate),
-        priority: Value(priority),
       ),
     );
 
@@ -81,14 +67,11 @@ class TaskRepositoryImpl implements TaskRepository {
       id: id,
       title: title,
       description: description,
-      buildingId: buildingId,
-      gridX: gridX,
-      gridY: gridY,
-      dueDate: dueDate,
-      completedAt: null,
       priority: priority,
-      createdAt: now,
-      updatedAt: now,
+      status: domain.TaskStatus.pending,
+      buildingId: buildingId,
+      createdAt: DateTime.now(),
+      dueDate: dueDate,
     );
   }
 
@@ -100,39 +83,22 @@ class TaskRepositoryImpl implements TaskRepository {
       TasksCompanion(
         title: Value(task.title),
         description: Value(task.description),
+        priority: Value(_priorityToInt(task.priority)),
         buildingId: Value(task.buildingId),
-        gridX: Value(task.gridX),
-        gridY: Value(task.gridY),
         dueDate: Value(task.dueDate),
         completedAt: Value(task.completedAt),
-        priority: Value(task.priority),
-        updatedAt: Value(DateTime.now()),
       ),
     );
-    return task.copyWith(updatedAt: DateTime.now());
+    return task;
   }
 
   @override
   Future<domain.Task> completeTask(int id) async {
-    final now = DateTime.now();
-    await (_database.update(_database.tasks)..where((t) => t.id.equals(id)))
-        .write(TasksCompanion(
-      completedAt: Value(now),
-      updatedAt: Value(now),
-    ));
-    final updated = await getTaskById(id);
-    return updated!;
-  }
+    final task = await getTaskById(id);
+    if (task == null) throw Exception('Task not found');
 
-  @override
-  Future<domain.Task> uncompleteTask(int id) async {
-    await (_database.update(_database.tasks)..where((t) => t.id.equals(id)))
-        .write(TasksCompanion(
-      completedAt: const Value(null),
-      updatedAt: Value(DateTime.now()),
-    ));
-    final updated = await getTaskById(id);
-    return updated!;
+    final completed = task.complete();
+    return updateTask(completed);
   }
 
   @override
@@ -144,10 +110,27 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<int> deleteCompletedTasks() async {
-    return await (_database.delete(_database.tasks)
-          ..where((t) => t.completedAt.isNotNull()))
-        .go();
+  Future<List<domain.Task>> getOverdueTasks() async {
+    final now = DateTime.now();
+    final query = _database.select(_database.tasks)
+      ..where((t) => t.dueDate.isSmallerThanValue(now) & t.completedAt.isNull());
+    final rows = await query.get();
+    return rows.map(_toDomainTask).toList();
+  }
+
+  @override
+  Future<List<domain.Task>> getTasksDueToday() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    
+    final query = _database.select(_database.tasks)
+      ..where((t) => 
+        t.dueDate.isBiggerOrEqualValue(startOfDay) & 
+        t.dueDate.isSmallerThanValue(endOfDay) &
+        t.completedAt.isNull());
+    final rows = await query.get();
+    return rows.map(_toDomainTask).toList();
   }
 
   domain.Task _toDomainTask(Task row) {
@@ -155,14 +138,41 @@ class TaskRepositoryImpl implements TaskRepository {
       id: row.id,
       title: row.title,
       description: row.description,
+      priority: _intToPriority(row.priority),
+      status: row.completedAt != null 
+        ? domain.TaskStatus.completed 
+        : domain.TaskStatus.pending,
       buildingId: row.buildingId,
-      gridX: row.gridX,
-      gridY: row.gridY,
+      createdAt: row.createdAt,
       dueDate: row.dueDate,
       completedAt: row.completedAt,
-      priority: row.priority,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     );
+  }
+
+  String _statusToString(domain.TaskStatus status) {
+    switch (status) {
+      case domain.TaskStatus.pending: return 'pending';
+      case domain.TaskStatus.inProgress: return 'in_progress';
+      case domain.TaskStatus.completed: return 'completed';
+      case domain.TaskStatus.cancelled: return 'cancelled';
+    }
+  }
+
+  int _priorityToInt(domain.TaskPriority priority) {
+    switch (priority) {
+      case domain.TaskPriority.low: return 0;
+      case domain.TaskPriority.medium: return 1;
+      case domain.TaskPriority.high: return 2;
+      case domain.TaskPriority.urgent: return 3;
+    }
+  }
+
+  domain.TaskPriority _intToPriority(int priority) {
+    switch (priority) {
+      case 0: return domain.TaskPriority.low;
+      case 2: return domain.TaskPriority.high;
+      case 3: return domain.TaskPriority.urgent;
+      default: return domain.TaskPriority.medium;
+    }
   }
 }
