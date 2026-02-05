@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Or Beit Build Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .phases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .phase {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 25px;
+            border: 3px solid;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .phase:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .phase.phase-1 { border-color: #3b82f6; }
+        .phase.phase-2 { border-color: #10b981; }
+        .phase.phase-3 { border-color: #f59e0b; }
+        .phase.phase-4 { border-color: #a855f7; }
+        .phase.phase-5 { border-color: #ef4444; }
+        .phase.victory { border-color: #fbbf24; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a1a 100%); }
+
+        .phase-header {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .phase-1 .phase-header { color: #3b82f6; }
+        .phase-2 .phase-header { color: #10b981; }
+        .phase-3 .phase-header { color: #f59e0b; }
+        .phase-4 .phase-header { color: #a855f7; }
+        .phase-5 .phase-header { color: #ef4444; }
+        .victory .phase-header { color: #fbbf24; }
+
+        .section {
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #a0a0a0;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .checklist li:hover {
+            color: #fff;
+        }
+
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .notes-area {
+            width: 100%;
+            min-height: 120px;
+            background: #0a0a0a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            resize: vertical;
+        }
+
+        .notes-area:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .tools, .bullets {
+            padding-left: 20px;
+        }
+
+        .bullets li {
+            margin: 5px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #1a1a1a;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 30px 0;
+            border: 2px solid #333;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .save-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .save-btn:active {
+            transform: translateY(0);
+        }
+
+        .instructions {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #333;
+            margin-top: 40px;
+        }
+
+        .instructions h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .saved-notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            background: #10b981;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .saved-notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="saved-notification" id="saveNotification">✓ Progress Saved!</div>
+    
+    <div class="container">
+        <header>
+            <h1>🏠 Or Beit Build Tracker</h1>
+            <p class="subtitle">Your visual roadmap. No getting lost. No forgetting where you were.</p>
+        </header>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar">0% Complete</div>
+        </div>
+
+        <div class="phases">
+            <!-- PHASE 1 -->
+            <div class="phase phase-1">
+                <div class="phase-header">🔵 PHASE 1: FOUNDATION</div>
+                
+                <div class="section">
+                    <div class="section-title">📋 WHAT YOU'RE BUILDING</div>
+                    <ul class="bullets">
+                        <li>Godot 4.x installed & running</li>
+                        <li>Antigravity plugin integrated</li>
+                        <li>Empty 3D scene renders</li>
+                        <li>Project structure created</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 WHY THIS MATTERS</div>
+                    <p>Foundation for everything. Proves your setup works. No backtracking later.</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🔧 TOOLS</div>
+                    <ul class="tools">
+                        <li>Godot Engine</li>
+                        <li>Antigravity plugin</li>
+                        <li>GitHub (version control)</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✅ DONE WHEN</div>
+                    <ul class="checklist" data-phase="1">
+                        <li><input type="checkbox" data-check="1-1"> 3D world runs on screen</li>
+                        <li><input type="checkbox" data-check="1-2"> No errors in console</li>
+                        <li><input type="checkbox" data-check="1-3"> Scene saved to project</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 YOUR NOTES</div>
+                    <textarea class="notes-area" data-notes="phase1" placeholder="API keys, logins, file paths, breakthroughs, 'aha' moments..."></textarea>
+                </div>
+            </div>
+
+            <!-- PHASE 2 -->
+            <div class="phase phase-2">
+                <div class="phase-header">🟢 PHASE 2: THE HOME</div>
+                
+                <div class="section">
+                    <div class="section-title">📋 WHAT YOU'RE BUILDING</div>
+                    <ul class="bullets">
+                        <li>Center house model/space</li>
+                        <li>Camera controls (WASD/mouse)</li>
+                        <li>Basic lighting & atmosphere</li>
+                        <li>Ground plane/environment</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 WHY THIS MATTERS</div>
+                    <p>This IS Or Beit's identity. Visual anchor for everything. First "wow" moment.</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🔧 TOOLS</div>
+                    <ul class="tools">
+                        <li>Blender (3D modeling)</li>
+                        <li>Godot scene editor</li>
+                        <li>HDRI lighting maps</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✅ DONE WHEN</div>
+                    <ul class="checklist" data-phase="2">
+                        <li><input type="checkbox" data-check="2-1"> Can navigate around house</li>
+                        <li><input type="checkbox" data-check="2-2"> Looks like YOUR vision</li>
+                        <li><input type="checkbox" data-check="2-3"> Performance is smooth</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 YOUR NOTES</div>
+                    <textarea class="notes-area" data-notes="phase2" placeholder="Model file locations, color schemes, ideas..."></textarea>
+                </div>
+            </div>
+
+            <!-- PHASE 3 -->
+            <div class="phase phase-3">
+                <div class="phase-header">🟡 PHASE 3: VOICE BRAIN</div>
+                
+                <div class="section">
+                    <div class="section-title">📋 WHAT YOU'RE BUILDING</div>
+                    <ul class="bullets">
+                        <li>Microphone input working</li>
+                        <li>Speech-to-text pipeline</li>
+                        <li>Claude API integration</li>
+                        <li>Text-to-speech output</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 WHY THIS MATTERS</div>
+                    <p>Core interaction model. Voice-first = Or Beit DNA. AI becomes "alive".</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🔧 TOOLS</div>
+                    <ul class="tools">
+                        <li>Anthropic Claude API</li>
+                        <li>Godot audio input</li>
+                        <li>TTS service (ElevenLabs?)</li>
+                        <li>Whisper API (speech-to-text)</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✅ DONE WHEN</div>
+                    <ul class="checklist" data-phase="3">
+                        <li><input type="checkbox" data-check="3-1"> Say something → AI responds</li>
+                        <li><input type="checkbox" data-check="3-2"> Voice sounds natural</li>
+                        <li><input type="checkbox" data-check="3-3"> < 2 second latency</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 YOUR NOTES</div>
+                    <textarea class="notes-area" data-notes="phase3" placeholder="API keys, rate limits, voice model settings..."></textarea>
+                </div>
+            </div>
+
+            <!-- PHASE 4 -->
+            <div class="phase phase-4">
+                <div class="phase-header">🟣 PHASE 4: ROOMS & CONTEXT</div>
+                
+                <div class="section">
+                    <div class="section-title">📋 WHAT YOU'RE BUILDING</div>
+                    <ul class="bullets">
+                        <li>Individual spaces (rooms)</li>
+                        <li>Office, Kitchen, Workshop, etc.</li>
+                        <li>Context switching system</li>
+                        <li>Visual state indicators</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 WHY THIS MATTERS</div>
+                    <p>Makes Or Beit SPATIAL. Context = intelligence. Different rooms = different AI.</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🔧 TOOLS</div>
+                    <ul class="tools">
+                        <li>Godot scenes per room</li>
+                        <li>State machine pattern</li>
+                        <li>JSON context storage</li>
+                        <li>Visual UI overlays</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✅ DONE WHEN</div>
+                    <ul class="checklist" data-phase="4">
+                        <li><input type="checkbox" data-check="4-1"> 3+ rooms exist & work</li>
+                        <li><input type="checkbox" data-check="4-2"> AI knows which room you're in</li>
+                        <li><input type="checkbox" data-check="4-3"> Each feels different</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 YOUR NOTES</div>
+                    <textarea class="notes-area" data-notes="phase4" placeholder="Room purposes, context rules, triggers..."></textarea>
+                </div>
+            </div>
+
+            <!-- PHASE 5 -->
+            <div class="phase phase-5">
+                <div class="phase-header">🔴 PHASE 5: INTEGRATIONS</div>
+                
+                <div class="section">
+                    <div class="section-title">📋 WHAT YOU'RE BUILDING</div>
+                    <ul class="bullets">
+                        <li>Calendar integration (Google)</li>
+                        <li>Email hooks (Gmail API)</li>
+                        <li>Task management system</li>
+                        <li>External service bridges</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎯 WHY THIS MATTERS</div>
+                    <p>Or Beit becomes USEFUL. Controls your actual life. Proves the vision works.</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🔧 TOOLS</div>
+                    <ul class="tools">
+                        <li>Google Calendar API</li>
+                        <li>Gmail API</li>
+                        <li>OAuth 2.0 setup</li>
+                        <li>Webhook systems</li>
+                        <li>Background sync jobs</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">✅ DONE WHEN</div>
+                    <ul class="checklist" data-phase="5">
+                        <li><input type="checkbox" data-check="5-1"> Can see real calendar</li>
+                        <li><input type="checkbox" data-check="5-2"> AI can read/send emails</li>
+                        <li><input type="checkbox" data-check="5-3"> Tasks sync both ways</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 YOUR NOTES</div>
+                    <textarea class="notes-area" data-notes="phase5" placeholder="API credentials, OAuth tokens, sync schedules..."></textarea>
+                </div>
+            </div>
+
+            <!-- VICTORY -->
+            <div class="phase victory">
+                <div class="phase-header">🏆 YOU DID IT</div>
+                
+                <div class="section">
+                    <p style="font-size: 1.2em; line-height: 1.8;">
+                        <strong>Or Beit is ALIVE.</strong><br><br>
+                        
+                        You have:<br>
+                        ✓ A 3D home you can walk through<br>
+                        ✓ Voice AI that responds<br>
+                        ✓ Different rooms with context<br>
+                        ✓ Real integrations working<br><br>
+                        
+                        This is the foundation.<br><br>
+                        
+                        Now you iterate:<br>
+                        • Add more rooms<br>
+                        • Refine the voice<br>
+                        • Build more integrations<br>
+                        • Make it YOURS<br><br>
+                        
+                        <hr style="margin: 20px 0; border-color: #333;">
+                        
+                        You built something no one else has.<br><br>
+                        
+                        <strong style="color: #fbbf24; font-size: 1.3em;">Your lighthouse is lit.</strong><br><br>
+                        
+                        🏠 Welcome home.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h2>🎯 HOW TO USE THIS</h2>
+            <ol style="padding-left: 20px; line-height: 2;">
+                <li><strong>Start at Phase 1 (blue)</strong> - Don't skip ahead</li>
+                <li><strong>Fill in YOUR NOTES</strong> as you work (this is critical)</li>
+                <li><strong>Check boxes</strong> when you complete tasks</li>
+                <li><strong>Only move forward</strong> when ALL boxes are checked in a phase</li>
+                <li><strong>Click "Save Progress"</strong> button regularly (especially at 8 AM)</li>
+                <li><strong>Reopen this file</strong> next session - everything loads automatically</li>
+            </ol>
+            <br>
+            <p><strong>At midnight when you start:</strong> Open this file → see where you left off → read your notes → continue</p>
+            <p><strong>At 8 AM when you finish:</strong> Update notes → check boxes → save → you'll never lose your place</p>
+            <br>
+            <p style="color: #667eea; font-weight: bold;">This file is YOURS. Keep it somewhere safe. It's your entire build history.</p>
+        </div>
+    </div>
+
+    <button class="save-btn" onclick="saveProgress()">💾 Save Progress</button>
+
+    <script>
+        // Auto-save to localStorage
+        function saveProgress() {
+            const data = {
+                checkboxes: {},
+                notes: {},
+                timestamp: new Date().toISOString()
+            };
+
+            // Save all checkboxes
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                data.checkboxes[cb.dataset.check] = cb.checked;
+            });
+
+            // Save all notes
+            document.querySelectorAll('.notes-area').forEach(textarea => {
+                data.notes[textarea.dataset.notes] = textarea.value;
+            });
+
+            localStorage.setItem('orBeitProgress', JSON.stringify(data));
+            
+            // Show notification
+            const notification = document.getElementById('saveNotification');
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 2000);
+            
+            updateProgress();
+        }
+
+        // Load progress on page load
+        function loadProgress() {
+            const saved = localStorage.getItem('orBeitProgress');
+            if (!saved) return;
+
+            const data = JSON.parse(saved);
+
+            // Restore checkboxes
+            Object.keys(data.checkboxes).forEach(key => {
+                const cb = document.querySelector(`[data-check="${key}"]`);
+                if (cb) cb.checked = data.checkboxes[key];
+            });
+
+            // Restore notes
+            Object.keys(data.notes).forEach(key => {
+                const textarea = document.querySelector(`[data-notes="${key}"]`);
+                if (textarea) textarea.value = data.notes[key];
+            });
+
+            updateProgress();
+        }
+
+        // Update progress bar
+        function updateProgress() {
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            const percentage = Math.round((checkedBoxes.length / allCheckboxes.length) * 100);
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '% Complete';
+        }
+
+        // Auto-save on checkbox change
+        document.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                saveProgress();
+            }
+        });
+
+        // Auto-save notes every 10 seconds if typing
+        let notesSaveTimeout;
+        document.querySelectorAll('.notes-area').forEach(textarea => {
+            textarea.addEventListener('input', () => {
+                clearTimeout(notesSaveTimeout);
+                notesSaveTimeout = setTimeout(saveProgress, 10000);
+            });
+            
+            // Save on blur (when clicking away)
+            textarea.addEventListener('blur', saveProgress);
+        });
+
+        // Load on page load
+        window.addEventListener('load', loadProgress);
+
+        // Keyboard shortcut: Ctrl+S or Cmd+S to save
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveProgress();
+            }
+        });
+    </script>
+</body>
+</html>
