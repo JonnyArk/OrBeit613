@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/entities/task.dart' as domain;
 import '../domain/entities/task_repository.dart';
-import '../data/repositories/task_repository_impl.dart';
-import '../data/database.dart';
 
 /// Provider for task repository
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
@@ -48,7 +46,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       width: 320,
       height: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E).withOpacity(0.95),
+        color: const Color(0xFF1A1A2E).withValues(alpha: 0.95),
         border: const Border(
           left: BorderSide(color: Color(0xFFD4AF37), width: 2),
         ),
@@ -108,11 +106,11 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox, size: 48, color: Colors.white.withOpacity(0.3)),
+            Icon(Icons.inbox, size: 48, color: Colors.white.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
               'No tasks yet',
-              style: TextStyle(color: Colors.white.withOpacity(0.5)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
             ),
           ],
         ),

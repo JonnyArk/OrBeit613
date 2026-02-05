@@ -4,7 +4,6 @@
 /// Shows available building options with previews.
 
 import 'package:flutter/material.dart';
-import 'sprite_manager.dart';
 
 /// Building type data
 class BuildingType {

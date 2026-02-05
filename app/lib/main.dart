@@ -16,7 +16,6 @@ import 'data/database.dart';
 import 'services/ai_interface.dart';
 import 'services/ai_service_impl.dart';
 import 'ui/task_list_panel.dart';
-import 'domain/entities/task_repository.dart';
 import 'data/repositories/task_repository_impl.dart';
 
 void main() async {

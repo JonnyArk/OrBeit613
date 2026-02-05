@@ -22,7 +22,6 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<List<domain.Task>> getTasksByStatus(domain.TaskStatus status) async {
-    final statusStr = _statusToString(status);
     final query = _database.select(_database.tasks)
       ..where((t) => t.completedAt.isNull());
     final rows = await query.get();
@@ -147,15 +146,6 @@ class TaskRepositoryImpl implements TaskRepository {
       dueDate: row.dueDate,
       completedAt: row.completedAt,
     );
-  }
-
-  String _statusToString(domain.TaskStatus status) {
-    switch (status) {
-      case domain.TaskStatus.pending: return 'pending';
-      case domain.TaskStatus.inProgress: return 'in_progress';
-      case domain.TaskStatus.completed: return 'completed';
-      case domain.TaskStatus.cancelled: return 'cancelled';
-    }
   }
 
   int _priorityToInt(domain.TaskPriority priority) {
