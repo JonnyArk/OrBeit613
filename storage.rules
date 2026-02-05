@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// OrBeit Storage Security Rules
+// Last updated: 2026-02-05
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // =====================================================
+    // HELPER FUNCTIONS
+    // =====================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check file size (max 10MB)
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Check if it's an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // =====================================================
+    // USER UPLOADS
+    // =====================================================
+    
+    // Users can only upload to their own folder
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidSize();
+    }
+    
+    // =====================================================
+    // AI GENERATED ASSETS (Public read, system write only)
+    // =====================================================
+    
+    match /generated_assets/{assetId} {
+      // Anyone authenticated can read generated assets
+      allow read: if isAuthenticated();
+      // Only Cloud Functions can write (no client write)
+      allow write: if false;
+    }
+    
+    // =====================================================
+    // PUBLIC ASSETS (Read only)
+    // =====================================================
+    
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // =====================================================
+    // DEFAULT DENY
+    // =====================================================
+    
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,18 +1,90 @@
-rules_version='2'
+rules_version = '2';
+
+// OrBeit Firestore Security Rules
+// Last updated: 2026-02-05
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // =====================================================
+    // HELPER FUNCTIONS
+    // =====================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if the user owns this document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if request has valid data fields
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    // =====================================================
+    // USER DATA
+    // =====================================================
+    
+    // Users can only read/write their own user document
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // User's life events - only the owner can access
+      match /life_events/{eventId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User's tasks - only the owner can access
+      match /tasks/{taskId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User's buildings - only the owner can access
+      match /buildings/{buildingId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // =====================================================
+    // AI CREDIT TRACKING (Admin/System only)
+    // =====================================================
+    
+    // Credit usage logs - read-only for authenticated users, write only via Cloud Functions
+    match /metadata/credits/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions can write
+    }
+    
+    // =====================================================
+    // WHISK CACHE (AI Asset Cache)
+    // =====================================================
+    
+    // Public read for cached assets, write only via Cloud Functions
+    match /whisk_cache/{cacheId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions can write
+    }
+    
+    // =====================================================
+    // FLOW CACHE (AI Workflow Cache)
+    // =====================================================
+    
+    match /flow_cache/{cacheId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions can write
+    }
+    
+    // =====================================================
+    // DEFAULT DENY
+    // =====================================================
+    
+    // Deny all other access by default
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 3, 7);
+      allow read, write: if false;
     }
   }
 }
