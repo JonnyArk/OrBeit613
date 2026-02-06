@@ -1,7 +1,3 @@
-/// OrBeit Game - Enhanced Main with Building Selector
-///
-/// Updates main.dart to include building selector and task panel toggles.
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flame/game.dart';
@@ -17,6 +13,8 @@ import 'services/ai_interface.dart';
 import 'services/ai_service_impl.dart';
 import 'ui/task_list_panel.dart';
 import 'data/repositories/task_repository_impl.dart';
+import 'ui/ai_architect_dialog.dart';
+import 'data/repositories/life_event_repository_impl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +27,7 @@ void main() async {
   final database = AppDatabase();
   final buildingRepository = BuildingRepositoryImpl(database);
   final taskRepository = TaskRepositoryImpl(database);
+  final lifeEventRepository = LifeEventRepositoryImpl(database);
   
   // Initialize AI service
   final aiService = AIServiceImpl();
@@ -39,6 +38,7 @@ void main() async {
         buildingRepositoryProvider.overrideWithValue(buildingRepository),
         aiServiceProvider.overrideWithValue(aiService),
         taskRepositoryProvider.overrideWithValue(taskRepository),
+        lifeEventRepositoryProvider.overrideWithValue(lifeEventRepository),
       ],
       child: const OrBeitApp(),
     ),
@@ -52,6 +52,11 @@ final buildingRepositoryProvider = Provider<BuildingRepository>((ref) {
 
 /// Provider for AI service
 final aiServiceProvider = Provider<AIService>((ref) {
+  throw UnimplementedError('Must override in main()');
+});
+
+/// Provider for LifeEvent repository
+final lifeEventRepositoryProvider = Provider<LifeEventRepository>((ref) {
   throw UnimplementedError('Must override in main()');
 });
 
@@ -199,36 +204,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _showAIDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Row(
-          children: [
-            const Icon(Icons.auto_awesome, color: Color(0xFFD4AF37)),
-            const SizedBox(width: 12),
-            const Text('AI Assistant', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your AI assistant is ready to help you:',
-              style: TextStyle(color: Colors.white.withAlpha(200)),
-            ),
-            const SizedBox(height: 16),
-            _AIFeatureRow(icon: Icons.image, text: 'Generate building sprites'),
-            _AIFeatureRow(icon: Icons.psychology, text: 'Distill life context'),
-            _AIFeatureRow(icon: Icons.analytics, text: 'Track credit usage'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it', style: TextStyle(color: Color(0xFFD4AF37))),
-          ),
-        ],
-      ),
+      builder: (ctx) => const AIArchitectDialog(),
     );
   }
 }
@@ -274,27 +250,6 @@ class _ToolbarButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _AIFeatureRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _AIFeatureRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: const Color(0xFF134E5E)),
-          const SizedBox(width: 8),
-          Text(text, style: const TextStyle(color: Colors.white70)),
-        ],
       ),
     );
   }

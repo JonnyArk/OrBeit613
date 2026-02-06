@@ -1,6 +1,8 @@
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../domain/entities/building.dart';
 import 'isometric_grid.dart';
 import 'building_component.dart';
 import '../domain/repositories/building_repository.dart';
@@ -12,6 +14,8 @@ class WorldGame extends FlameGame {
   /// Repository for loading and saving buildings
   final BuildingRepository buildingRepository;
 
+  StreamSubscription<List<Building>>? _buildingSubscription;
+
   WorldGame({required this.buildingRepository});
 
   @override
@@ -22,8 +26,8 @@ class WorldGame extends FlameGame {
     // Add the isometric grid
     add(IsometricGrid());
     
-    // Load all buildings from database
-    await _loadBuildings();
+    // Subscribe to building updates
+    _buildingSubscription = buildingRepository.watchAllBuildings().listen(_syncBuildings);
     
     add(TextComponent(
       text: 'OrBeit: Sovereign Sanctum',
@@ -38,26 +42,35 @@ class WorldGame extends FlameGame {
     ));
   }
 
-  /// Loads all buildings from the repository and adds them to the game
-  Future<void> _loadBuildings() async {
-    try {
-      final buildings = await buildingRepository.getAllBuildings();
-      
-      for (final building in buildings) {
-        final component = BuildingComponent(building: building);
-        add(component);
+  @override
+  void onRemove() {
+    _buildingSubscription?.cancel();
+    super.onRemove();
+  }
+
+  /// Syncs the game components with the latest database state
+  void _syncBuildings(List<Building> buildings) {
+    // Get currently rendered building IDs
+    final currentComponents = children.whereType<BuildingComponent>().toList();
+    final currentIds = currentComponents.map((c) => c.building.id).toSet();
+    final newIds = buildings.map((b) => b.id).toSet();
+
+    // Remove deleted buildings
+    for (final component in currentComponents) {
+      if (!newIds.contains(component.building.id)) {
+        component.removeFromParent();
       }
-      
-      print('Loaded ${buildings.length} buildings from database');
-    } catch (e) {
-      print('Error loading buildings: $e');
+    }
+
+    // Add new buildings
+    for (final building in buildings) {
+      if (!currentIds.contains(building.id)) {
+        add(BuildingComponent(building: building));
+      }
     }
   }
 
-  /// Adds a new building component to the game
-  ///
-  /// Call this after creating a building via the repository to immediately
-  /// render it without restarting the game.
+  /// Adds a new building component to the game manually
   void addBuilding(BuildingComponent component) {
     add(component);
   }

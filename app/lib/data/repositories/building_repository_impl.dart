@@ -24,6 +24,13 @@ class BuildingRepositoryImpl implements BuildingRepository {
   }
 
   @override
+  Stream<List<domain.Building>> watchAllBuildings() {
+    return _database.select(_database.buildings).watch().map(
+      (rows) => rows.map(_toDomainBuilding).toList(),
+    );
+  }
+
+  @override
   Future<domain.Building?> getBuildingById(int id) async {
     final query = _database.select(_database.buildings)
       ..where((tbl) => tbl.id.equals(id));
