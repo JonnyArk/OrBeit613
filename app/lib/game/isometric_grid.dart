@@ -1,84 +1,83 @@
-/// OrBeit Spatial Layer - Isometric Grid Component
+/// OrBeit Spatial Layer - Isometric Terrain Grid
 ///
-/// Renders a procedural 2.5D isometric grid using the Sovereign Sanctum
-/// aesthetic (geometric gold lines on dark slate background).
+/// Renders the world terrain as sprite-based isometric tiles.
+/// Each tile is loaded from the terrain data and rendered with
+/// proper isometric projection.
 ///
 /// **Visual Design:**
-/// - Diamond-shaped tiles for isometric projection
-/// - Gold (#D4AF37) gridlines with transparency
-/// - Deep teal (#134E5E) for tile highlights
-/// - Dark slate (#1A1A2E) background
+/// - Sprite-based terrain tiles (grass, road, water, sand, dirt)
+/// - Natural variety with dark/light grass patches
+/// - Procedurally generated landscape features
 ///
 /// **For Future Agents:**
 /// - Tile dimensions: 64x32 (width x height)
 /// - Grid size: 20x20 (configurable)
 /// - Coordinate system: Standard isometric (x = col - row, y = col + row)
-/// - Extend this component to add interaction handlers (tap, drag)
 
 import 'dart:ui';
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
+import 'terrain_tile.dart';
+import 'world_terrain_data.dart';
 
-/// Procedural isometric grid renderer
+/// Sprite-based isometric terrain renderer
 ///
-/// Creates a visual grid without requiring sprite assets.
-/// Renders in Flame's game loop for high performance.
+/// Loads terrain tile sprites and renders them in correct
+/// isometric order for proper visual layering.
 class IsometricGrid extends PositionComponent {
-  /// Number of columns in the grid
-  final int columns;
-  
-  /// Number of rows in the grid
-  final int rows;
-  
+  /// Terrain data defining what tile is at each position
+  final WorldTerrainData terrainData;
+
   /// Width of each tile in pixels
   final double tileWidth;
-  
+
   /// Height of each tile in pixels
   final double tileHeight;
-  
-  // Sovereign Sanctum Colors
-  final Paint _linePaint = Paint()
-    ..color = const Color(0xFFD4AF37).withValues(alpha: 0.3) // Geometric Gold (faint)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.0;
+
+  /// Cached sprites for each terrain type
+  final Map<TerrainType, Sprite> _spriteCache = {};
 
   IsometricGrid({
-    this.columns = 20,
-    this.rows = 20,
+    required this.terrainData,
     this.tileWidth = 64.0,
     this.tileHeight = 32.0,
   });
 
   @override
+  Future<void> onLoad() async {
+    // Pre-load all terrain sprites
+    for (final type in TerrainType.values) {
+      if (type == TerrainType.empty) continue;
+      _spriteCache[type] = await Sprite.load(type.spritePath);
+    }
+  }
+
+  @override
   void render(Canvas canvas) {
     super.render(canvas);
 
-    // Draw the grid
-    for (int col = 0; col < columns; col++) {
-      for (int row = 0; row < rows; row++) {
-        _drawTile(canvas, col, row);
+    // Render tiles in isometric order (back to front) for proper overlap
+    for (int col = 0; col < terrainData.columns; col++) {
+      for (int row = 0; row < terrainData.rows; row++) {
+        _renderTile(canvas, col, row);
       }
     }
   }
 
-  /// Draws a single isometric tile at the specified grid position
-  ///
-  /// Uses diamond shape calculated from isometric projection formulas.
-  void _drawTile(Canvas canvas, int col, int row) {
-    final Path path = Path();
-    
-    // Calculate vertices for isometric tile
-    // x = (col - row) * (width / 2)
-    // y = (col + row) * (height / 2)
-    final double centerX = (col - row) * (tileWidth / 2);
-    final double centerY = (col + row) * (tileHeight / 2);
+  /// Renders a single terrain tile at the specified grid position
+  void _renderTile(Canvas canvas, int col, int row) {
+    final terrainType = terrainData.getTile(col, row);
+    final sprite = _spriteCache[terrainType] ?? _spriteCache[TerrainType.grass];
+    if (sprite == null) return;
 
-    path.moveTo(centerX, centerY - tileHeight / 2); // Top
-    path.lineTo(centerX + tileWidth / 2, centerY);   // Right
-    path.lineTo(centerX, centerY + tileHeight / 2); // Bottom
-    path.lineTo(centerX - tileWidth / 2, centerY);   // Left
-    path.close();
+    // Calculate isometric position
+    final double screenX = (col - row) * (tileWidth / 2);
+    final double screenY = (col + row) * (tileHeight / 2);
 
-    canvas.drawPath(path, _linePaint);
+    // Render the sprite centered on the tile position
+    sprite.render(
+      canvas,
+      position: Vector2(screenX - tileWidth / 2, screenY - tileHeight / 2),
+      size: Vector2(tileWidth, tileHeight),
+    );
   }
 }
