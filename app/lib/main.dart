@@ -6,15 +6,22 @@ import 'firebase_options.dart';
 import 'game/world_game.dart';
 import 'game/building_component.dart';
 import 'game/building_selector.dart';
-import 'domain/repositories/building_repository.dart';
+import 'providers/building_provider.dart';
+import 'providers/ai_service_provider.dart';
+import 'providers/life_event_provider.dart';
+import 'providers/task_provider.dart';
 import 'data/repositories/building_repository_impl.dart';
-import 'data/database.dart';
-import 'services/ai_interface.dart';
+import 'data/database.dart' hide Building; // Fix ambiguous import
 import 'services/ai_service_impl.dart';
-import 'ui/task_list_panel.dart';
 import 'data/repositories/task_repository_impl.dart';
+import 'ui/task_list_panel.dart';
 import 'ui/ai_architect_dialog.dart';
 import 'data/repositories/life_event_repository_impl.dart';
+import 'presentation/screens/covenant_screen.dart';
+import 'providers/genesis_provider.dart';
+import 'data/repositories/genesis_repository_impl.dart';
+import 'providers/database_provider.dart';
+import 'domain/entities/building.dart'; // For Logic check
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +33,10 @@ void main() async {
   // Initialize database and repositories
   final database = AppDatabase();
   final buildingRepository = BuildingRepositoryImpl(database);
-  final taskRepository = TaskRepositoryImpl(database);
-  final lifeEventRepository = LifeEventRepositoryImpl(database);
+  final taskRepository = TaskRepositoryImpl(database);      // Restored
+  final lifeEventRepository = LifeEventRepositoryImpl(database); // Restored
+  // Initialize Genesis repository
+  final genesisRepository = GenesisRepositoryImpl(database);
   
   // Initialize AI service
   final aiService = AIServiceImpl();
@@ -35,7 +44,9 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [
+        databaseProvider.overrideWithValue(database),
         buildingRepositoryProvider.overrideWithValue(buildingRepository),
+        genesisRepositoryProvider.overrideWithValue(genesisRepository),
         aiServiceProvider.overrideWithValue(aiService),
         taskRepositoryProvider.overrideWithValue(taskRepository),
         lifeEventRepositoryProvider.overrideWithValue(lifeEventRepository),
@@ -45,20 +56,13 @@ void main() async {
   );
 }
 
-/// Provider for building repository
-final buildingRepositoryProvider = Provider<BuildingRepository>((ref) {
-  throw UnimplementedError('Must override in main()');
-});
-
-/// Provider for AI service
-final aiServiceProvider = Provider<AIService>((ref) {
-  throw UnimplementedError('Must override in main()');
-});
-
-/// Provider for LifeEvent repository
-final lifeEventRepositoryProvider = Provider<LifeEventRepository>((ref) {
-  throw UnimplementedError('Must override in main()');
-});
+// All providers are now defined in providers/ directory
+// buildingRepositoryProvider → providers/building_provider.dart
+// taskRepositoryProvider     → providers/task_provider.dart
+// aiServiceProvider          → providers/ai_service_provider.dart
+// lifeEventRepositoryProvider → providers/life_event_provider.dart
+// genesisRepositoryProvider  → providers/genesis_provider.dart
+// databaseProvider           → providers/database_provider.dart
 
 /// Root application widget
 class OrBeitApp extends StatelessWidget {
@@ -73,8 +77,41 @@ class OrBeitApp extends StatelessWidget {
         primaryColor: const Color(0xFFD4AF37),
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: const GameScreen(),
+      // TODO: Wrap with a proper splash/loading screen that checks DB state
+      // For now, we assume if you launch the app, you hit the Gate first unless persisted.
+      // We will implement a proper wrapper that checks `buildingRepository.count()` next.
+      home: const LandingWrapper(), 
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class LandingWrapper extends ConsumerWidget {
+  const LandingWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Determine if we should show Covenant or Game
+    // We check if any buildings exist. If key buildings exist, we assume Vow is made.
+    final buildingRepo = ref.watch(buildingRepositoryProvider);
+    
+    return FutureBuilder<List<Building>>(
+      future: buildingRepo.getAllBuildings(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+             body: Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37))),
+          );
+        }
+
+        final hasBuildings = snapshot.data != null && snapshot.data!.isNotEmpty;
+        
+        if (hasBuildings) {
+          return const GameScreen();
+        } else {
+          return const CovenantScreen();
+        }
+      },
     );
   }
 }

@@ -1,7 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../main.dart'; // to access aiServiceProvider
+import '../providers/ai_service_provider.dart';
+import '../providers/building_provider.dart';
+import '../providers/life_event_provider.dart';
 import '../services/ai_interface.dart';
 import '../data/repositories/life_event_repository_impl.dart';
 

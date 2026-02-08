@@ -6,12 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/entities/task.dart' as domain;
-import '../domain/entities/task_repository.dart';
-
-/// Provider for task repository
-final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  throw UnimplementedError('Override in main()');
-});
+import '../providers/task_provider.dart';
 
 /// Task list panel widget
 class TaskListPanel extends ConsumerStatefulWidget {
