@@ -2,76 +2,84 @@
 description: Continue building from current state - autonomous execution
 ---
 
-# Continue Build Workflow
+# Resume OrBeit Build
+
 // turbo-all
 
-This workflow picks up development from the current state and continues until blocked.
+## Current State (Last saved: Feb 8, 2026 at 8:42 PM CST)
 
-## Step 1: Verify Environment
+**Branch:** main
+**Last commit:** `3358646f` — Save: Design vision + onboarding flow + build artifacts
+**GitHub:** `JonnyArk/OrBeit613` — fully pushed, working tree clean
+**Build:** ✅ `flutter build macos --debug` succeeded
+**Analysis:** ✅ 0 errors, 0 warnings
+
+## When Resuming
+
+### Step 1: Verify we're in the right place
 ```bash
-cd /Users/tekhletvault/OrBeit\ AG\ Build/app
-flutter --version && echo "✅ Flutter OK" || echo "❌ Flutter not found"
+cd "/Users/tekhletvault/OrBeit AG Build" && git status && git log --oneline -3
 ```
+Expected: `nothing to commit, working tree clean`
 
-## Step 2: Check Dependencies
+### Step 2: Verify code still compiles
 ```bash
-cd /Users/tekhletvault/OrBeit\ AG\ Build/app
-flutter pub get
+cd "/Users/tekhletvault/OrBeit AG Build/app" && /Users/tekhletvault/development/flutter/bin/cache/dart-sdk/bin/dart analyze lib/ 2>&1 | grep -E "(error|warning)" | head -5
 ```
+Expected: No output (0 errors, 0 warnings)
 
-## Step 3: Run Full Analysis
-```bash
-cd /Users/tekhletvault/OrBeit\ AG\ Build/app
-dart analyze lib/
+### Step 3: Read the design vision
+Read these files to remember where we're going:
+- `design-references/DESIGN_VISION.md` — Art style, 3 zoom levels, UI patterns
+- `design-references/ONBOARDING_FLOW.md` — The creation narrative
+- `STATUS_REPORT.md` — Full project inventory
+- `.agent/workflows/master.md` — Phase checklist
+
+### Step 4: Check for new reference images
+User may have dropped new images in the chat. Check for uploaded images.
+
+## What's Next (Priority Order)
+
+### Phase 13: Rebuild Front-End for Design Vision
+The current tile-grid isometric view needs to become:
+1. **Onboarding void screen** — dark background, Or lighthouse center, setup panels
+2. **3-level zoom navigation** — World → Floor Plan → Room Interior
+3. **Scene-based rendering** — Full illustrated scenes, not tiny sprite tiles
+4. **Or presence system** — Lighthouse always visible, dims in daylight
+
+### Phase 14: House Generation Flow
+- User uploads photo or describes house
+- AI generates isometric house options
+- User picks, house gets placed, world lights up
+
+## Key File Locations
+
+| What | Where |
+|------|-------|
+| App entry point | `app/lib/main.dart` |
+| Design target | `design-references/DESIGN_VISION.md` |
+| Onboarding spec | `design-references/ONBOARDING_FLOW.md` |
+| Full inventory | `STATUS_REPORT.md` |
+| Master workflow | `.agent/workflows/master.md` |
+| Task board | `.agent/tasks.md` |
+| Architecture doc | `ARCHITECTURE.md` |
+| Pubspec | `app/pubspec.yaml` |
+| Or's brain | `app/lib/services/or_intelligence.dart` |
+| Or's beacon UI | `app/lib/ui/or_beacon.dart` |
+| All services | `app/lib/services/` (7 files) |
+| All providers | `app/lib/providers/` (7 files) |
+| Game engine | `app/lib/game/` (8 files) |
+| Sprite assets | `app/assets/sprites/` (22 PNGs) |
+| Firebase functions | `functions/src/` |
+| Firebase rules | `firestore.rules`, `storage.rules` |
+
+## Flutter SDK Location
 ```
-
-## Step 4: Identify Current Phase
-Check the master workflow status:
-1. Read `/Users/tekhletvault/OrBeit AG Build/.agent/workflows/master.md`
-2. Find the first unchecked `[ ]` item
-3. Execute that phase's workflow
-
-## Step 5: Execute Next Phase
-
-### If Phase 7 (Environment Setup):
-- Check for CocoaPods: `which pod`
-- If missing, notify user to run: `sudo gem install cocoapods`
-- After install: `cd app/macos && pod install`
-
-### If Phase 8 (Visual Assets):
-- Verify sprites exist: `ls app/assets/sprites/`
-- Add AI-generated sprite handling to BuildingComponent
-- Test with: `flutter run -d macos`
-
-### If Phase 9 (LifeEvents UI):
-- Create `lib/ui/life_events_timeline.dart`
-- Add timeline view to main screen
-- Wire to LifeEventRepository
-
-### If Phase 10 (Task-Building Integration):
-- Modify BuildingComponent to show task indicators
-- Create task marker sprites
-- Connect taps to task panel
-
-## Step 6: Commit Progress
-```bash
-cd /Users/tekhletvault/OrBeit\ AG\ Build
-git add -A
-git commit -m "chore: Phase [N] complete - [description]"
-git push
+/Users/tekhletvault/development/flutter/bin/flutter
 ```
+This is NOT on PATH from VS Code terminal. Use full path or run from Terminal.app.
 
-## Step 7: Update Master Workflow
-Mark completed phase with `[x]` in master.md
-
-## Step 8: Loop
-Return to Step 4 unless:
-- All phases complete
-- Blocker encountered requiring user input
-- Critical error found
-
-## Blockers That Require User
-- sudo password needed (CocoaPods)
-- App Store credentials
-- Firebase project configuration
-- API key provisioning
+## Known Issues (Don't Waste Time On These)
+- `.firebaserc: Operation not permitted` during git — harmless, ignore
+- Telemetry `FileSystemException` at end of dart commands — completes fine, ignore
+- VS Code terminal can't run flutter due to macOS Sequoia provenance — use Terminal.app
