@@ -31,20 +31,55 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+  # ── Game Engine ──────────────────────────────────────────────
   flame: ^1.35.0
+
+  # ── Local Database & Storage ────────────────────────────────
+  # Drift: Structured relational data (buildings, tasks, people, life events)
   drift: ^2.31.0
   sqlite3_flutter_libs: ^0.5.41
-  path_provider: ^2.1.5
-  path: ^1.9.1
+  # Hive: Ultra-fast key-value cache (Or's insights, cached images, settings)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # ── Encryption & Security ──────────────────────────────────
+  # Secure Storage: OS keychain for API keys & secrets (iOS Secure Enclave, Android Keystore)
+  flutter_secure_storage: ^10.0.0
+
+  # ── Voice & Speech ─────────────────────────────────────────
+  # Speech-to-Text: Core to OrBeit's voice-first interaction
+  speech_to_text: ^7.3.0
+  # Text-to-Speech: The Or's voice responses (offline, on-device)
+  flutter_tts: ^4.2.5
+
+  # ── State Management ───────────────────────────────────────
   flutter_riverpod: ^2.6.1
+
+  # ── UI & Animation ────────────────────────────────────────
+  # Declarative animations: Or pulsing, lighthouse beam, glow effects
+  flutter_animate: ^4.5.2
+  # Lottie: Complex animations (Or's intricate animations, loading states)
+  lottie: ^3.3.1
+  # Carousel: Multi-angle house views (front/back/left/right crossfading)
+  carousel_slider: ^5.0.0
+
+  # ── AI & Language Models ──────────────────────────────────
+  # Gemini API: On-device (Nano) + cloud fallback
+  google_generative_ai: ^0.4.7
+
+  # ── Firebase & Backend ────────────────────────────────────
   firebase_core: ^2.24.2
   firebase_auth: ^4.16.0
   cloud_firestore: ^4.14.0
   cloud_functions: ^4.6.0
-  google_generative_ai: ^0.4.7
+
+  # ── Device & Platform ─────────────────────────────────────
+  # Detect capabilities (Face ID? Gemini Nano support? Screen size?)
+  device_info_plus: ^12.3.0
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
