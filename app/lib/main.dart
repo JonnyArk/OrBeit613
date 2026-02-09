@@ -21,14 +21,17 @@ import 'services/device_capability_service.dart';
 import 'services/or_intelligence.dart';
 import 'data/repositories/task_repository_impl.dart';
 import 'ui/task_list_panel.dart';
+import 'ui/life_event_timeline.dart';
 import 'ui/ai_architect_dialog.dart';
 import 'data/repositories/life_event_repository_impl.dart';
-import 'presentation/screens/covenant_screen.dart';
+import 'presentation/screens/onboarding_screen.dart';
 import 'providers/genesis_provider.dart';
 import 'data/repositories/genesis_repository_impl.dart';
 import 'providers/database_provider.dart';
 import 'domain/entities/building.dart'; // For Logic check
 import 'ui/or_beacon.dart';
+import 'services/auth_service_impl.dart';
+import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +49,17 @@ void main() async {
   
   // ── AI Service ──────────────────────────────────────────
   final aiService = AIServiceImpl();
+
+  // ── Auth Service ────────────────────────────────────────
+  final authService = AuthServiceImpl();
+  // Silent anonymous sign-in (MVP — no UI needed)
+  try {
+    await authService.signInAnonymously();
+    debugPrint('[OrBeit] Auth: signed in as ${authService.currentUser?.uid}');
+  } catch (e) {
+    debugPrint('[OrBeit] Auth: anonymous sign-in failed (offline?): $e');
+    // Non-blocking — local features still work without auth
+  }
 
   // ── Core Services (new) ─────────────────────────────────
   final secureStorage = SecureStorageService();
@@ -80,6 +94,8 @@ void main() async {
         voiceServiceProvider.overrideWithValue(voiceService),
         deviceCapabilityProvider.overrideWithValue(deviceCapability),
         orIntelligenceProvider.overrideWithValue(orIntelligence),
+        // Auth
+        authServiceProvider.overrideWithValue(authService),
       ],
       child: const OrBeitApp(),
     ),
@@ -139,7 +155,7 @@ class LandingWrapper extends ConsumerWidget {
         if (hasBuildings) {
           return const GameScreen();
         } else {
-          return const CovenantScreen();
+          return const OnboardingScreen();
         }
       },
     );
@@ -158,6 +174,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   WorldGame? _game;
   bool _showBuildingSelector = false;
   bool _showTaskPanel = false;
+  bool _showTimeline = false;
 
   /// Handle voice commands from the Or
   void _handleVoiceCommand(String command) async {
@@ -173,18 +190,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         setState(() {
           _showBuildingSelector = true;
           _showTaskPanel = false;
+          _showTimeline = false;
         });
         break;
       case OrIntent.taskManage:
         setState(() {
           _showTaskPanel = true;
           _showBuildingSelector = false;
+          _showTimeline = false;
         });
         break;
       case OrIntent.command:
         setState(() {
           _showBuildingSelector = false;
           _showTaskPanel = false;
+          _showTimeline = false;
         });
         break;
       default:
@@ -226,6 +246,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               top: 0,
               bottom: 0,
               child: TaskListPanel(),
+            ),
+          
+          // Life Event Timeline (right side)
+          if (_showTimeline)
+            const Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: LifeEventTimeline(),
             ),
           
           // The Or — voice-first AI beacon (bottom-right)
@@ -275,6 +304,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onTap: () => setState(() {
                 _showBuildingSelector = !_showBuildingSelector;
                 _showTaskPanel = false;
+                _showTimeline = false;
               }),
             ),
             const SizedBox(width: 24),
@@ -284,6 +314,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               isActive: _showTaskPanel,
               onTap: () => setState(() {
                 _showTaskPanel = !_showTaskPanel;
+                _showBuildingSelector = false;
+                _showTimeline = false;
+              }),
+            ),
+            const SizedBox(width: 24),
+            _ToolbarButton(
+              icon: Icons.timeline,
+              label: 'Timeline',
+              isActive: _showTimeline,
+              onTap: () => setState(() {
+                _showTimeline = !_showTimeline;
+                _showTaskPanel = false;
                 _showBuildingSelector = false;
               }),
             ),
