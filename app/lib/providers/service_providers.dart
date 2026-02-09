@@ -11,6 +11,7 @@ import '../services/secure_storage_service.dart';
 import '../services/cache_service.dart';
 import '../services/voice_service.dart';
 import '../services/device_capability_service.dart';
+import '../services/or_intelligence.dart';
 
 /// Secure storage — OS keychain for secrets
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
@@ -29,5 +30,10 @@ final voiceServiceProvider = Provider<VoiceService>((ref) {
 
 /// Device capabilities — what can this device do?
 final deviceCapabilityProvider = Provider<DeviceCapabilityService>((ref) {
+  throw UnimplementedError('Must override in ProviderScope');
+});
+
+/// The Or's intelligence — AI brain with custom logic
+final orIntelligenceProvider = Provider<OrIntelligence>((ref) {
   throw UnimplementedError('Must override in ProviderScope');
 });

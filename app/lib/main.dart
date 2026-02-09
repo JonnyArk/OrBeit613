@@ -18,6 +18,7 @@ import 'services/secure_storage_service.dart';
 import 'services/cache_service.dart';
 import 'services/voice_service.dart';
 import 'services/device_capability_service.dart';
+import 'services/or_intelligence.dart';
 import 'data/repositories/task_repository_impl.dart';
 import 'ui/task_list_panel.dart';
 import 'ui/ai_architect_dialog.dart';
@@ -55,6 +56,14 @@ void main() async {
   // Initialize Hive cache (must happen before runApp)
   await cacheService.initialize();
 
+  // ── The Or's Brain ──────────────────────────────────────
+  final orIntelligence = OrIntelligence(
+    secureStorage: secureStorage,
+    cacheService: cacheService,
+  );
+  // Attempt to initialize Gemini (non-blocking — works offline)
+  await orIntelligence.initialize();
+
   runApp(
     ProviderScope(
       overrides: [
@@ -70,6 +79,7 @@ void main() async {
         cacheServiceProvider.overrideWithValue(cacheService),
         voiceServiceProvider.overrideWithValue(voiceService),
         deviceCapabilityProvider.overrideWithValue(deviceCapability),
+        orIntelligenceProvider.overrideWithValue(orIntelligence),
       ],
       child: const OrBeitApp(),
     ),
@@ -150,27 +160,40 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _showTaskPanel = false;
 
   /// Handle voice commands from the Or
-  void _handleVoiceCommand(String command) {
-    final lower = command.toLowerCase().trim();
+  void _handleVoiceCommand(String command) async {
+    final or = ref.read(orIntelligenceProvider);
+    final voice = ref.read(voiceServiceProvider);
     
-    // Basic command routing — will be expanded with Or AI logic
-    if (lower.contains('build') || lower.contains('place')) {
-      setState(() {
-        _showBuildingSelector = true;
-        _showTaskPanel = false;
-      });
-    } else if (lower.contains('task') || lower.contains('to do')) {
-      setState(() {
-        _showTaskPanel = true;
-        _showBuildingSelector = false;
-      });
-    } else if (lower.contains('close') || lower.contains('hide')) {
-      setState(() {
-        _showBuildingSelector = false;
-        _showTaskPanel = false;
-      });
+    // Parse intent with the Or's intelligence
+    final intent = or.parseIntent(command);
+    
+    // Route based on recognized intent
+    switch (intent.intent) {
+      case OrIntent.buildingCreate:
+        setState(() {
+          _showBuildingSelector = true;
+          _showTaskPanel = false;
+        });
+        break;
+      case OrIntent.taskManage:
+        setState(() {
+          _showTaskPanel = true;
+          _showBuildingSelector = false;
+        });
+        break;
+      case OrIntent.command:
+        setState(() {
+          _showBuildingSelector = false;
+          _showTaskPanel = false;
+        });
+        break;
+      default:
+        break;
     }
-    // Future: Send to Or AI logic layer for deeper processing
+
+    // Generate and speak the Or's response
+    final response = await or.generateResponse(command);
+    await voice.speak(response);
   }
 
   @override
