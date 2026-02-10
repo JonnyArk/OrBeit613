@@ -1,0 +1,4 @@
+## 2026-02-05 - Missing Authentication on Firebase Gen 2 onRequest Functions
+**Vulnerability:** Insecure Direct Object Reference (IDOR) and Missing Authentication. `onRequest` functions expose raw HTTP endpoints and do not automatically verify Firebase Authentication tokens, unlike `onCall` functions. The application trusted the `userId` in the request body without verification.
+**Learning:** Developers might assume `onRequest` functions are secure by default if they are used to `onCall`. Any `onRequest` function handling sensitive data must manually verify the ID token.
+**Prevention:** Always use `admin.auth().verifyIdToken()` middleware for `onRequest` functions or prefer `onCall` functions which provide `context.auth` automatically. Always overwrite user-provided IDs with the authenticated UID.

@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,28 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper to authenticate request and return user ID.
+ * Throws error if unauthorized.
+ *
+ * @param request - The incoming HTTP request
+ * @returns Promise resolving to the authenticated user ID
+ */
+const authenticateRequest = async (request: Request): Promise<string> => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: Missing or invalid Authorization header");
+    }
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Authentication failed", { error });
+        throw new Error("Unauthorized: Invalid token");
+    }
+};
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -118,6 +141,15 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // Authenticate user
+            let userId: string;
+            try {
+                userId = await authenticateRequest(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -128,9 +160,13 @@ export const generateAsset = onRequest(
                 return;
             }
 
+            // Enforce authenticated user ID
+            body.userId = userId;
+
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                userId, // Log the authenticated user ID
             });
 
             const whiskService = getWhiskService();
@@ -174,6 +210,15 @@ export const distillContext = onRequest(
         }
 
         try {
+            // Authenticate user
+            let userId: string;
+            try {
+                userId = await authenticateRequest(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -184,10 +229,14 @@ export const distillContext = onRequest(
                 return;
             }
 
+            // Enforce authenticated user ID
+            body.userId = userId;
+
             logger.info("Context distillation request received", {
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                userId, // Log the authenticated user ID
             });
 
             const flowService = getFlowService();
