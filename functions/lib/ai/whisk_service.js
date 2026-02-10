@@ -179,14 +179,17 @@ class WhiskService {
         // Generate the asset via Whisk API
         const assetId = this.generateAssetId(assetType);
         const assetUrl = await this.callWhiskAPI(prompt, size, assetId);
+        // Parallelize independent post-processing tasks
+        const promises = [];
         // Cache the result
-        await this.cacheAsset(promptHash, assetUrl, assetId, assetType, size);
+        promises.push(this.cacheAsset(promptHash, assetUrl, assetId, assetType, size));
         // Log credit usage
-        await this.aiManager.logUsage("whisk", creditCost, `${assetType}_generation`, userId, {
+        promises.push(this.aiManager.logUsage("whisk", creditCost, `${assetType}_generation`, userId, {
             promptHash,
             size,
             assetId,
-        });
+        }));
+        await Promise.all(promises);
         logger.info("Asset generated successfully", {
             assetId,
             creditCost,
