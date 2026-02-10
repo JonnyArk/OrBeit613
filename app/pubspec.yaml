@@ -81,6 +81,10 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
 
+  # ── Camera & Photos ─────────────────────────────────────
+  # Photo capture for AI building generation
+  image_picker: ^1.1.2
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -93,6 +97,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sprites/
+    - assets/icons/
 dev_dependencies:
   flutter_lints: ^5.0.0
   drift_dev: ^2.31.0

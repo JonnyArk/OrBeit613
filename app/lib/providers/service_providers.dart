@@ -12,6 +12,8 @@ import '../services/cache_service.dart';
 import '../services/voice_service.dart';
 import '../services/device_capability_service.dart';
 import '../services/or_intelligence.dart';
+import '../services/duress_mode_service.dart';
+import '../services/calendar_mode_service.dart';
 
 /// Secure storage — OS keychain for secrets
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
@@ -35,5 +37,15 @@ final deviceCapabilityProvider = Provider<DeviceCapabilityService>((ref) {
 
 /// The Or's intelligence — AI brain with custom logic
 final orIntelligenceProvider = Provider<OrIntelligence>((ref) {
+  throw UnimplementedError('Must override in ProviderScope');
+});
+
+/// Duress mode — panic PIN security state
+final duressModeServiceProvider = Provider<DuressModeService>((ref) {
+  throw UnimplementedError('Must override in ProviderScope');
+});
+
+/// Calendar mode — Western vs Hebrew cultural calendar
+final calendarModeServiceProvider = Provider<CalendarModeService>((ref) {
   throw UnimplementedError('Must override in ProviderScope');
 });

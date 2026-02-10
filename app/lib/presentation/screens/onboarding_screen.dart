@@ -15,11 +15,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/building_provider.dart';
 import '../../providers/genesis_provider.dart';
+import '../../providers/service_providers.dart';
 import '../../domain/entities/genesis_kit.dart';
+import '../../domain/entities/calendar_mode.dart';
 import '../../main.dart';
+import 'calendar_choice_screen.dart';
 
 /// Stage of the onboarding
-enum _OnboardingStage { theVoid, theFoundation, theLight }
+enum _OnboardingStage { theVoid, theFoundation, theCalendar, theLight }
 
 /// The cinematic onboarding screen
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -33,6 +36,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with TickerProviderStateMixin {
   _OnboardingStage _stage = _OnboardingStage.theVoid;
   final _nameController = TextEditingController();
+  CalendarMode _selectedCalendarMode = CalendarMode.western;
   bool _showWelcomeText = false;
   bool _showPulse = false;
   bool _isCreating = false;
@@ -127,6 +131,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           const Color(0xFF050510),
           const Color(0xFF0A0A1A),
         ];
+      case _OnboardingStage.theCalendar:
+        return [
+          const Color(0xFF080818),
+          const Color(0xFF0E0E1E),
+        ];
       case _OnboardingStage.theLight:
         return [
           const Color(0xFF0A0A12),
@@ -141,6 +150,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         return 0.15;
       case _OnboardingStage.theFoundation:
         return 0.3;
+      case _OnboardingStage.theCalendar:
+        return 0.4;
       case _OnboardingStage.theLight:
         return 0.6;
     }
@@ -154,6 +165,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         return _buildVoidStage();
       case _OnboardingStage.theFoundation:
         return _buildFoundationStage();
+      case _OnboardingStage.theCalendar:
+        return _buildCalendarStage();
       case _OnboardingStage.theLight:
         return _buildLightStage();
     }
@@ -333,7 +346,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 return Transform.scale(
                   scale: scale,
                   child: OutlinedButton(
-                    onPressed: _isCreating ? null : _advanceToLight,
+                    onPressed: _isCreating ? null : _advanceToCalendar,
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(
                         color: Color(0xFFD4AF37),
@@ -372,6 +385,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ],
         ),
       ),
+    );
+  }
+
+  // ── STAGE 2.5: The Calendar Choice ────────────────────────
+
+  Widget _buildCalendarStage() {
+    return CalendarChoiceScreen(
+      onModeSelected: (mode) async {
+        _selectedCalendarMode = mode;
+
+        // Persist the choice
+        final calendarService = ref.read(calendarModeServiceProvider);
+        await calendarService.setMode(mode);
+
+        // Advance to the light stage
+        _advanceToLight();
+      },
     );
   }
 
@@ -476,7 +506,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     setState(() => _stage = _OnboardingStage.theFoundation);
   }
 
-  Future<void> _advanceToLight() async {
+  void _advanceToCalendar() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -487,6 +517,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       );
       return;
     }
+    setState(() {
+      _isCreating = false;
+      _stage = _OnboardingStage.theCalendar;
+    });
+  }
+
+  Future<void> _advanceToLight() async {
+    final name = _nameController.text.trim();
+    // Name was validated in _advanceToCalendar
 
     setState(() => _isCreating = true);
 
@@ -498,6 +537,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         x: 10,
         y: 10,
       );
+
+      // If Hebrew mode: spawn the Tabernacle at the world's heart
+      if (_selectedCalendarMode == CalendarMode.hebrew) {
+        await buildingRepo.createBuilding(
+          type: 'mishkan_tabernacle',
+          x: 15,
+          y: 8,
+        );
+      }
 
       // Spawn the Genesis kits
       final genesisRepo = ref.read(genesisRepositoryProvider);

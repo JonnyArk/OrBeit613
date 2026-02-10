@@ -32,6 +32,14 @@ import 'domain/entities/building.dart'; // For Logic check
 import 'ui/or_beacon.dart';
 import 'services/auth_service_impl.dart';
 import 'providers/auth_provider.dart';
+import 'services/reminder_service.dart';
+import 'providers/phase3_providers.dart';
+import 'services/voice_command_processor.dart';
+import 'ui/reminder_banner.dart';
+import 'services/duress_mode_service.dart';
+import 'services/calendar_mode_service.dart';
+import 'presentation/screens/pin_gate_screen.dart';
+import 'game/dummy_world_game.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +75,13 @@ void main() async {
   final voiceService = VoiceService();
   final deviceCapability = DeviceCapabilityService();
 
+  // ── Duress Mode Service ────────────────────────────────
+  final duressModeService = DuressModeService();
+
+  // ── Calendar Mode Service ──────────────────────────────
+  final calendarModeService = CalendarModeService(storage: secureStorage);
+  await calendarModeService.initialize();
+
   // Initialize Hive cache (must happen before runApp)
   await cacheService.initialize();
 
@@ -96,6 +111,9 @@ void main() async {
         orIntelligenceProvider.overrideWithValue(orIntelligence),
         // Auth
         authServiceProvider.overrideWithValue(authService),
+        // Security
+        duressModeServiceProvider.overrideWithValue(duressModeService),
+        calendarModeServiceProvider.overrideWithValue(calendarModeService),
       ],
       child: const OrBeitApp(),
     ),
@@ -123,11 +141,110 @@ class OrBeitApp extends StatelessWidget {
         primaryColor: const Color(0xFFD4AF37),
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      // TODO: Wrap with a proper splash/loading screen that checks DB state
-      // For now, we assume if you launch the app, you hit the Gate first unless persisted.
-      // We will implement a proper wrapper that checks `buildingRepository.count()` next.
-      home: const LandingWrapper(), 
+      home: const SecurityGateWrapper(), 
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+/// Security Gate — PIN entry before ANYTHING loads
+///
+/// Flow:
+/// 1. PIN Gate Screen appears (dark, minimal)
+/// 2. User enters PIN:
+///    - Master PIN → normal mode → LandingWrapper (real data)
+///    - Duress PIN → duress mode → DummyGameScreen (fake world)
+/// 3. On first launch: guides user through setting both PINs
+class SecurityGateWrapper extends ConsumerStatefulWidget {
+  const SecurityGateWrapper({super.key});
+
+  @override
+  ConsumerState<SecurityGateWrapper> createState() => _SecurityGateWrapperState();
+}
+
+class _SecurityGateWrapperState extends ConsumerState<SecurityGateWrapper> {
+  bool _authenticated = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final secureStorage = ref.watch(secureStorageProvider);
+    final duressModeService = ref.watch(duressModeServiceProvider);
+
+    if (!_authenticated) {
+      return PinGateScreen(
+        secureStorage: secureStorage,
+        duressModeService: duressModeService,
+        onAuthenticated: () {
+          setState(() => _authenticated = true);
+        },
+      );
+    }
+
+    // After authentication — route based on mode
+    if (duressModeService.isDuressActive) {
+      return const DummyGameScreen();
+    }
+
+    return const LandingWrapper();
+  }
+}
+
+/// Dummy game screen shown during duress mode
+/// Looks like a barely-used app — no real data anywhere
+class DummyGameScreen extends StatelessWidget {
+  const DummyGameScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      body: Stack(
+        children: [
+          GameWidget(game: DummyWorldGame()),
+          // Minimal HUD to look legitimate
+          Positioned(
+            top: 48,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'OrBeit',
+                style: TextStyle(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+          ),
+          // Simple "Get Started" prompt to look like fresh install
+          Positioned(
+            bottom: 48,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E).withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                  ),
+                ),
+                child: const Text(
+                  'Tap to explore your world',
+                  style: TextStyle(
+                    color: Color(0xFF808080),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -137,8 +254,6 @@ class LandingWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Determine if we should show Covenant or Game
-    // We check if any buildings exist. If key buildings exist, we assume Vow is made.
     final buildingRepo = ref.watch(buildingRepositoryProvider);
     
     return FutureBuilder<List<Building>>(
@@ -175,50 +290,63 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _showBuildingSelector = false;
   bool _showTaskPanel = false;
   bool _showTimeline = false;
+  ReminderService? _reminderService;
 
   /// Handle voice commands from the Or
   void _handleVoiceCommand(String command) async {
-    final or = ref.read(orIntelligenceProvider);
-    final voice = ref.read(voiceServiceProvider);
+    final processor = ref.read(voiceCommandProcessorProvider);
     
-    // Parse intent with the Or's intelligence
-    final intent = or.parseIntent(command);
+    // Process the voice command (parse → execute → speak)
+    final result = await processor.processVoiceInput(command);
     
-    // Route based on recognized intent
-    switch (intent.intent) {
-      case OrIntent.buildingCreate:
-        setState(() {
-          _showBuildingSelector = true;
-          _showTaskPanel = false;
-          _showTimeline = false;
-        });
-        break;
-      case OrIntent.taskManage:
-        setState(() {
-          _showTaskPanel = true;
-          _showBuildingSelector = false;
-          _showTimeline = false;
-        });
-        break;
-      case OrIntent.command:
-        setState(() {
-          _showBuildingSelector = false;
-          _showTaskPanel = false;
-          _showTimeline = false;
-        });
-        break;
-      default:
-        break;
+    // Route UI based on what was executed
+    if (result.executedIntent != null) {
+      switch (result.executedIntent!) {
+        case OrIntent.buildingCreate:
+          setState(() {
+            _showBuildingSelector = true;
+            _showTaskPanel = false;
+            _showTimeline = false;
+          });
+          // Refresh game world to show new building
+          _game?.refreshBuildings();
+          break;
+        case OrIntent.taskManage:
+          setState(() {
+            _showTaskPanel = true;
+            _showBuildingSelector = false;
+            _showTimeline = false;
+          });
+          break;
+        case OrIntent.eventRecord:
+          setState(() {
+            _showTimeline = true;
+            _showTaskPanel = false;
+            _showBuildingSelector = false;
+          });
+          break;
+        case OrIntent.command:
+          setState(() {
+            _showBuildingSelector = false;
+            _showTaskPanel = false;
+            _showTimeline = false;
+          });
+          break;
+        default:
+          break;
+      }
     }
-
-    // Generate and speak the Or's response
-    final response = await or.generateResponse(command);
-    await voice.speak(response);
   }
 
   @override
   Widget build(BuildContext context) {
     final repository = ref.watch(buildingRepositoryProvider);
+
+    // Initialize reminder service once
+    if (_reminderService == null) {
+      _reminderService = ref.read(reminderServiceProvider);
+      _reminderService!.start(interval: const Duration(minutes: 15));
+    }
 
     return Scaffold(
       body: Stack(
@@ -266,6 +394,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onVoiceCommand: _handleVoiceCommand,
             ),
           ),
+
+          // Reminder banner (top)
+          if (_reminderService != null)
+            ReminderBanner(
+              reminderStream: _reminderService!.reminders,
+              onTapTasks: () => setState(() {
+                _showTaskPanel = true;
+                _showBuildingSelector = false;
+                _showTimeline = false;
+              }),
+              onTapTimeline: () => setState(() {
+                _showTimeline = true;
+                _showTaskPanel = false;
+                _showBuildingSelector = false;
+              }),
+              onDismiss: (id) => _reminderService?.dismiss(id),
+            ),
 
           // Bottom toolbar
           Positioned(
