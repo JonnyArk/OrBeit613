@@ -612,14 +612,18 @@ class _SwipeableTaskTile extends StatelessWidget {
             ),
           ),
           // Tap to complete
-          GestureDetector(
-            onTap: onComplete,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.white.withAlpha(40),
-                size: 22,
+          Semantics(
+            label: 'Mark task as complete',
+            button: true,
+            child: GestureDetector(
+              onTap: onComplete,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.white.withAlpha(40),
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -925,24 +929,28 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
       children: domain.TaskPriority.values.map((p) {
         final isSelected = _priority == p;
         return Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _priority = p),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? _colorForPriority(p).withAlpha(30)
-                    : Colors.white.withAlpha(5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
+          child: Semantics(
+            label: 'Select ${_labelForPriority(p)} priority',
+            selected: isSelected,
+            button: true,
+            child: GestureDetector(
+              onTap: () => setState(() => _priority = p),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
                   color: isSelected
-                      ? _colorForPriority(p).withAlpha(120)
-                      : Colors.white.withAlpha(15),
-                  width: isSelected ? 1.5 : 1,
+                      ? _colorForPriority(p).withAlpha(30)
+                      : Colors.white.withAlpha(5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? _colorForPriority(p).withAlpha(120)
+                        : Colors.white.withAlpha(15),
+                    width: isSelected ? 1.5 : 1,
+                  ),
                 ),
-              ),
-              child: Column(
+                child: Column(
                 children: [
                   Icon(
                     Icons.flag,
@@ -965,6 +973,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                 ],
               ),
             ),
+          ),
           ),
         );
       }).toList(),
@@ -998,12 +1007,16 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             ),
             const Spacer(),
             if (_dueDate != null)
-              GestureDetector(
-                onTap: () => setState(() => _dueDate = null),
-                child: Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white.withAlpha(60),
+              Semantics(
+                label: 'Clear due date',
+                button: true,
+                child: GestureDetector(
+                  onTap: () => setState(() => _dueDate = null),
+                  child: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.white.withAlpha(60),
+                  ),
                 ),
               )
             else
