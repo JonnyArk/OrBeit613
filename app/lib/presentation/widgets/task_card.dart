@@ -85,87 +85,114 @@ class TaskCard extends StatelessWidget {
   }
 
   Widget _buildCheckbox(ThemeData theme, bool isCompleted) {
-    return GestureDetector(
-      onTap: onComplete,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isCompleted 
-                ? theme.colorScheme.primary 
-                : theme.dividerColor,
-            width: 2,
+    return Semantics(
+      label: isCompleted ? 'Mark as incomplete' : 'Mark as complete',
+      checked: isCompleted,
+      button: true,
+      enabled: onComplete != null,
+      container: true,
+      child: GestureDetector(
+        onTap: onComplete,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isCompleted
+                    ? theme.colorScheme.primary
+                    : theme.dividerColor,
+                width: 2,
+              ),
+              color: isCompleted
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
+            ),
+            child: isCompleted
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                : null,
           ),
-          color: isCompleted 
-              ? theme.colorScheme.primary 
-              : Colors.transparent,
         ),
-        child: isCompleted
-            ? const Icon(Icons.check, size: 16, color: Colors.white)
-            : null,
       ),
     );
   }
 
   Widget _buildDueDateChip(ThemeData theme, bool isOverdue) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.schedule,
-          size: 14,
-          color: isOverdue ? Colors.red : theme.hintColor,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          _formatDate(task.dueDate!),
-          style: theme.textTheme.labelSmall?.copyWith(
+    final dateText = _formatDate(task.dueDate!);
+    return Semantics(
+      label: 'Due $dateText',
+      container: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule,
+            size: 14,
             color: isOverdue ? Colors.red : theme.hintColor,
           ),
-        ),
-      ],
+          const SizedBox(width: 4),
+          Text(
+            dateText,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: isOverdue ? Colors.red : theme.hintColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPriorityBadge(ThemeData theme) {
     Color color;
     String label;
+    String semanticsLabel;
     
     switch (task.priority) {
       case TaskPriority.low:
         color = Colors.grey;
         label = 'L';
+        semanticsLabel = 'Low Priority';
         break;
       case TaskPriority.medium:
         color = Colors.blue;
         label = 'M';
+        semanticsLabel = 'Medium Priority';
         break;
       case TaskPriority.high:
         color = Colors.orange;
         label = 'H';
+        semanticsLabel = 'High Priority';
         break;
       case TaskPriority.urgent:
         color = Colors.red;
         label = '!';
+        semanticsLabel = 'Urgent Priority';
         break;
     }
     
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: color.withAlpha(51),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
+    return Semantics(
+      label: semanticsLabel,
+      container: true,
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: color.withAlpha(51),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ),
       ),
