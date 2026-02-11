@@ -11,7 +11,7 @@
 
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -76,24 +76,25 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "User must be authenticated");
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
         logger.info("Credit usage requested", summary);
 
-        response.json({
+        return {
             success: true,
             data: summary,
             timestamp: new Date().toISOString(),
-        });
+        };
     } catch (error) {
         logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
-            success: false,
-            error: "Failed to retrieve credit usage",
-        });
+        throw new HttpsError("internal", "Failed to retrieve credit usage");
     }
 });
 
@@ -108,47 +109,48 @@ export const creditUsage = onRequest(async (_request, response) => {
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
-export const generateAsset = onRequest(
+export const generateAsset = onCall(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "User must be authenticated");
         }
 
         try {
-            const body = request.body as AssetGenerationRequest;
+            const body = request.data as AssetGenerationRequest;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
-                response.status(400).json({
-                    error: "Missing required fields: assetType and context",
-                });
-                return;
+                throw new HttpsError(
+                    "invalid-argument",
+                    "Missing required fields: assetType and context"
+                );
             }
 
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                uid: request.auth.uid,
             });
 
             const whiskService = getWhiskService();
             const result = await whiskService.generateAsset(body);
 
-            response.json({
+            return {
                 success: true,
                 data: result,
                 timestamp: new Date().toISOString(),
-            });
+            };
         } catch (error) {
             logger.error("Asset generation failed", { error });
             const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
+
+            if (error instanceof HttpsError) {
+                throw error;
+            }
+
+            throw new HttpsError("internal", errorMessage);
         }
     }
 );
@@ -164,48 +166,49 @@ export const generateAsset = onRequest(
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
-export const distillContext = onRequest(
+export const distillContext = onCall(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "User must be authenticated");
         }
 
         try {
-            const body = request.body as DistillationRequest;
+            const body = request.data as DistillationRequest;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
-                response.status(400).json({
-                    error: "Missing required fields: rawData and dataType",
-                });
-                return;
+                throw new HttpsError(
+                    "invalid-argument",
+                    "Missing required fields: rawData and dataType"
+                );
             }
 
             logger.info("Context distillation request received", {
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                uid: request.auth.uid,
             });
 
             const flowService = getFlowService();
             const result = await flowService.distillContext(body);
 
-            response.json({
+            return {
                 success: true,
                 data: result,
                 timestamp: new Date().toISOString(),
-            });
+            };
         } catch (error) {
             logger.error("Context distillation failed", { error });
             const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
+
+            if (error instanceof HttpsError) {
+                throw error;
+            }
+
+            throw new HttpsError("internal", errorMessage);
         }
     }
 );
