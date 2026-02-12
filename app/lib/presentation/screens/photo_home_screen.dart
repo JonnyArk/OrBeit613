@@ -275,6 +275,8 @@ class _PhotoHomeScreenState extends State<PhotoHomeScreen>
               width: 200,
               height: 150,
               fit: BoxFit.cover,
+              // Optimize memory by resizing image to display size * pixel density
+              cacheWidth: 600,
             ),
           ),
 
@@ -324,6 +326,8 @@ class _PhotoHomeScreenState extends State<PhotoHomeScreen>
                   width: 280,
                   height: 200,
                   fit: BoxFit.cover,
+                  // Optimize memory by resizing image to display size * pixel density
+                  cacheWidth: 850,
                 ),
               ),
             ),
