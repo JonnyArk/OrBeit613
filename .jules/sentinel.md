@@ -1,0 +1,4 @@
+## 2025-02-05 - [CRITICAL] Unauthenticated Sensitive Cloud Functions
+**Vulnerability:** Found `generateAsset` and `distillContext` functions exposed as public HTTP endpoints (`onRequest`) without any authentication or authorization checks. These functions consume paid AI credits and generate content.
+**Learning:** The client code was already using `httpsCallable`, indicating an expectation of secure Callable Functions, but the backend implementation was insecurely using `onRequest`. This discrepancy created a silent vulnerability where the backend was wide open while the frontend *thought* it was secure.
+**Prevention:** Always verify that backend function triggers (`onCall` vs `onRequest`) match the client's calling method and the security requirements of the data/action. Sensitive actions consuming resources must always be `onCall` or have manual token verification.
