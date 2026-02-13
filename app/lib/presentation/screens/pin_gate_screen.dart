@@ -8,6 +8,7 @@
 /// Looks like a standard app lock screen — nothing suspicious.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/secure_storage_service.dart';
 import '../../services/duress_mode_service.dart';
 
@@ -38,6 +39,7 @@ class _PinGateScreenState extends State<PinGateScreen>
   int _failedAttempts = 0;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -55,11 +57,13 @@ class _PinGateScreenState extends State<PinGateScreen>
   @override
   void dispose() {
     _shakeController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   Future<void> _checkFirstLaunch() async {
     final hasMasterPin = await widget.secureStorage.containsKey(SecureKeys.masterPin);
+    debugPrint('[PIN Gate] Has master PIN: $hasMasterPin');
     if (!hasMasterPin) {
       setState(() {
         _isSettingUp = true;
@@ -90,7 +94,7 @@ class _PinGateScreenState extends State<PinGateScreen>
     if (_isSettingUp) {
       switch (_setupStep) {
         case 0:
-          return 'This unlocks your real world';
+          return 'Choose a 6-digit PIN to unlock your world';
         case 1:
           return 'Enter it again to confirm';
         case 2:
@@ -107,6 +111,48 @@ class _PinGateScreenState extends State<PinGateScreen>
     return 'Welcome back';
   }
 
+  /// Handle physical keyboard input
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+
+    // Number keys (both main keyboard and numpad)
+    final digitMap = {
+      LogicalKeyboardKey.digit0: '0', LogicalKeyboardKey.numpad0: '0',
+      LogicalKeyboardKey.digit1: '1', LogicalKeyboardKey.numpad1: '1',
+      LogicalKeyboardKey.digit2: '2', LogicalKeyboardKey.numpad2: '2',
+      LogicalKeyboardKey.digit3: '3', LogicalKeyboardKey.numpad3: '3',
+      LogicalKeyboardKey.digit4: '4', LogicalKeyboardKey.numpad4: '4',
+      LogicalKeyboardKey.digit5: '5', LogicalKeyboardKey.numpad5: '5',
+      LogicalKeyboardKey.digit6: '6', LogicalKeyboardKey.numpad6: '6',
+      LogicalKeyboardKey.digit7: '7', LogicalKeyboardKey.numpad7: '7',
+      LogicalKeyboardKey.digit8: '8', LogicalKeyboardKey.numpad8: '8',
+      LogicalKeyboardKey.digit9: '9', LogicalKeyboardKey.numpad9: '9',
+    };
+
+    if (digitMap.containsKey(key)) {
+      _onDigitPressed(digitMap[key]!);
+      return KeyEventResult.handled;
+    }
+
+    // Backspace
+    if (key == LogicalKeyboardKey.backspace) {
+      _onBackspace();
+      return KeyEventResult.handled;
+    }
+
+    // Enter/Return — submit PIN
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
+      if (_enteredPin.length == 6) {
+        _submitPin();
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   void _onDigitPressed(String digit) {
     if (_enteredPin.length >= 6) return;
 
@@ -115,8 +161,11 @@ class _PinGateScreenState extends State<PinGateScreen>
       _showError = false;
     });
 
+    debugPrint('[PIN Gate] Digit entered. Length: ${_enteredPin.length}');
+
     // Auto-submit when all 6 digits are entered
     if (_enteredPin.length == 6) {
+      debugPrint('[PIN Gate] 6 digits reached — submitting');
       _submitPin();
     }
   }
@@ -130,6 +179,7 @@ class _PinGateScreenState extends State<PinGateScreen>
   }
 
   Future<void> _submitPin() async {
+    debugPrint('[PIN Gate] _submitPin called. isSettingUp=$_isSettingUp, step=$_setupStep, pin length=${_enteredPin.length}');
     if (_isSettingUp) {
       await _handleSetup();
     } else {
@@ -139,6 +189,7 @@ class _PinGateScreenState extends State<PinGateScreen>
 
   Future<void> _handleSetup() async {
     final pin = _enteredPin;
+    debugPrint('[PIN Gate] _handleSetup step=$_setupStep, pin="${pin.replaceAll(RegExp(r'.'), '*')}"');
 
     switch (_setupStep) {
       case 0: // Set master PIN
@@ -147,6 +198,7 @@ class _PinGateScreenState extends State<PinGateScreen>
           _enteredPin = '';
           _setupStep = 1;
         });
+        debugPrint('[PIN Gate] Master PIN captured, moving to confirm step');
         break;
 
       case 1: // Confirm master PIN
@@ -156,7 +208,9 @@ class _PinGateScreenState extends State<PinGateScreen>
             _enteredPin = '';
             _setupStep = 2;
           });
+          debugPrint('[PIN Gate] Master PIN confirmed & saved, moving to duress step');
         } else {
+          debugPrint('[PIN Gate] Master PIN confirmation FAILED — restarting');
           _triggerError();
           setState(() {
             _enteredPin = '';
@@ -169,6 +223,7 @@ class _PinGateScreenState extends State<PinGateScreen>
       case 2: // Set duress PIN
         if (pin == _setupMasterPin) {
           // Can't use same PIN as master!
+          debugPrint('[PIN Gate] Duress PIN same as master — rejected');
           _triggerError();
           setState(() {
             _enteredPin = '';
@@ -180,16 +235,18 @@ class _PinGateScreenState extends State<PinGateScreen>
           _enteredPin = '';
           _setupStep = 3;
         });
+        debugPrint('[PIN Gate] Duress PIN captured, moving to confirm step');
         break;
 
       case 3: // Confirm duress PIN
         if (pin == _setupDuressPin) {
           await widget.secureStorage.setDuressPin(pin);
-          // Setup complete — sign in normally
+          debugPrint('[PIN Gate] Setup COMPLETE — signing in normally');
           widget.duressModeService.activateNormalMode();
           await widget.secureStorage.recordAuth();
           widget.onAuthenticated();
         } else {
+          debugPrint('[PIN Gate] Duress PIN confirmation FAILED — restarting duress');
           _triggerError();
           setState(() {
             _enteredPin = '';
@@ -203,11 +260,12 @@ class _PinGateScreenState extends State<PinGateScreen>
 
   Future<void> _handleLogin() async {
     final pin = _enteredPin;
+    debugPrint('[PIN Gate] _handleLogin called');
 
     // Check duress PIN FIRST (before master)
     final isDuress = await widget.secureStorage.isDuressPin(pin);
     if (isDuress) {
-      // ⚠️ DURESS MODE — show dummy world
+      debugPrint('[PIN Gate] DURESS PIN detected');
       widget.duressModeService.activateDuressMode();
       widget.onAuthenticated();
       return;
@@ -216,6 +274,7 @@ class _PinGateScreenState extends State<PinGateScreen>
     // Check master PIN
     final isCorrect = await widget.secureStorage.verifyMasterPin(pin);
     if (isCorrect) {
+      debugPrint('[PIN Gate] Master PIN correct — signing in');
       widget.duressModeService.activateNormalMode();
       await widget.secureStorage.recordAuth();
       widget.onAuthenticated();
@@ -224,6 +283,7 @@ class _PinGateScreenState extends State<PinGateScreen>
 
     // Wrong PIN
     _failedAttempts++;
+    debugPrint('[PIN Gate] Wrong PIN. Attempts: $_failedAttempts');
     _triggerError();
     setState(() {
       _enteredPin = '';
@@ -240,111 +300,129 @@ class _PinGateScreenState extends State<PinGateScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A14),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0A0A14),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
 
-            // ── Logo / Icon ──
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF00BCD4).withValues(alpha: 0.3),
-                    const Color(0xFF0A0A14),
-                  ],
+              // ── Logo / Icon ──
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF00BCD4).withValues(alpha: 0.3),
+                      const Color(0xFF0A0A14),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    width: 2,
+                  ),
                 ),
-                border: Border.all(
-                  color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-                  width: 2,
+                child: const Icon(
+                  Icons.shield_outlined,
+                  color: Color(0xFFD4AF37),
+                  size: 36,
                 ),
               ),
-              child: const Icon(
-                Icons.shield_outlined,
-                color: Color(0xFFD4AF37),
-                size: 36,
+
+              const SizedBox(height: 32),
+
+              // ── Prompt Text ──
+              Text(
+                _promptText,
+                style: const TextStyle(
+                  color: Color(0xFFE0E0E0),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 1.2,
+                ),
               ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // ── Prompt Text ──
-            Text(
-              _promptText,
-              style: const TextStyle(
-                color: Color(0xFFE0E0E0),
-                fontSize: 22,
-                fontWeight: FontWeight.w300,
-                letterSpacing: 1.2,
+              const SizedBox(height: 8),
+              Text(
+                _subtitleText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _showError
+                      ? const Color(0xFFFF5252)
+                      : const Color(0xFF808080),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w300,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _subtitleText,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _showError
-                    ? const Color(0xFFFF5252)
-                    : const Color(0xFF808080),
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
 
-            const SizedBox(height: 40),
+              const SizedBox(height: 40),
 
-            // ── PIN Dots ──
-            AnimatedBuilder(
-              animation: _shakeAnimation,
-              builder: (context, child) {
-                final shake = _showError
-                    ? (1 - _shakeAnimation.value) * 10 *
-                        (_shakeAnimation.value * 3.14).remainder(1)
-                    : 0.0;
-                return Transform.translate(
-                  offset: Offset(shake, 0),
-                  child: child,
-                );
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (index) {
-                  final filled = index < _enteredPin.length;
-                  return Container(
-                    width: 16,
-                    height: 16,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: filled
-                          ? (_showError
-                              ? const Color(0xFFFF5252)
-                              : const Color(0xFFD4AF37))
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: _showError
-                            ? const Color(0xFFFF5252).withValues(alpha: 0.5)
-                            : const Color(0xFFD4AF37).withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
-                    ),
+              // ── PIN Dots ──
+              AnimatedBuilder(
+                animation: _shakeAnimation,
+                builder: (context, child) {
+                  final shake = _showError
+                      ? (1 - _shakeAnimation.value) * 10 *
+                          (_shakeAnimation.value * 3.14).remainder(1)
+                      : 0.0;
+                  return Transform.translate(
+                    offset: Offset(shake, 0),
+                    child: child,
                   );
-                }),
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(6, (index) {
+                    final filled = index < _enteredPin.length;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 16,
+                      height: 16,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: filled
+                            ? (_showError
+                                ? const Color(0xFFFF5252)
+                                : const Color(0xFFD4AF37))
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: _showError
+                              ? const Color(0xFFFF5252).withValues(alpha: 0.5)
+                              : const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
               ),
-            ),
 
-            const Spacer(flex: 1),
+              // ── Digit count hint ──
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  '${_enteredPin.length} / 6',
+                  style: TextStyle(
+                    color: const Color(0xFF808080).withValues(alpha: 0.5),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
 
-            // ── Number Pad ──
-            _buildNumberPad(),
+              const Spacer(flex: 1),
 
-            const Spacer(flex: 1),
-          ],
+              // ── Number Pad ──
+              _buildNumberPad(),
+
+              const Spacer(flex: 1),
+            ],
+          ),
         ),
       ),
     );
@@ -361,7 +439,7 @@ class _PinGateScreenState extends State<PinGateScreen>
           const SizedBox(height: 16),
           _buildRow(['7', '8', '9']),
           const SizedBox(height: 16),
-          _buildRow(['', '0', '⌫']),
+          _buildRow(['⌫', '0', '✓']),
         ],
       ),
     );
@@ -371,18 +449,26 @@ class _PinGateScreenState extends State<PinGateScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: keys.map((key) {
-        if (key.isEmpty) {
-          return const SizedBox(width: 72, height: 72);
-        }
         if (key == '⌫') {
           return _buildKey(key, onTap: _onBackspace);
+        }
+        if (key == '✓') {
+          return _buildKey(
+            key,
+            onTap: () {
+              if (_enteredPin.length == 6) {
+                _submitPin();
+              }
+            },
+            highlight: _enteredPin.length == 6,
+          );
         }
         return _buildKey(key, onTap: () => _onDigitPressed(key));
       }).toList(),
     );
   }
 
-  Widget _buildKey(String label, {required VoidCallback onTap}) {
+  Widget _buildKey(String label, {required VoidCallback onTap, bool highlight = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -390,10 +476,14 @@ class _PinGateScreenState extends State<PinGateScreen>
         height: 72,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFF1A1A2E),
+          color: highlight
+              ? const Color(0xFFD4AF37).withValues(alpha: 0.2)
+              : const Color(0xFF1A1A2E),
           border: Border.all(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
-            width: 1,
+            color: highlight
+                ? const Color(0xFFD4AF37)
+                : const Color(0xFFD4AF37).withValues(alpha: 0.15),
+            width: highlight ? 2 : 1,
           ),
         ),
         child: Center(
@@ -403,14 +493,22 @@ class _PinGateScreenState extends State<PinGateScreen>
                   color: Color(0xFF808080),
                   size: 22,
                 )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                    color: Color(0xFFE0E0E0),
-                    fontSize: 28,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
+              : label == '✓'
+                  ? Icon(
+                      Icons.check,
+                      color: highlight
+                          ? const Color(0xFFD4AF37)
+                          : const Color(0xFF808080),
+                      size: 28,
+                    )
+                  : Text(
+                      label,
+                      style: const TextStyle(
+                        color: Color(0xFFE0E0E0),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
         ),
       ),
     );
