@@ -113,3 +113,16 @@ pids/
 # Local dev files (IMPORTANT)
 # =============
 google-cloud-sdk/
+
+# =============
+# DUPLICATE CLONE PREVENTION (added 2026-02-13)
+# Never track nested repos, SDK copies, or cache dirs
+# =============
+Torah Hebrew/fresh_app/
+Torah Hebrew/.flutter_sdk/
+Torah Hebrew/.cocoapods_cache/
+Torah Hebrew/.pub_cache/
+Torah Hebrew/.tmp/
+**/fresh_app/
+**/.flutter_sdk/
+**/.cocoapods_cache/
