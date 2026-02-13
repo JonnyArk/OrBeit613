@@ -310,16 +310,74 @@ class OrIntelligence {
     }
   }
 
-  // ── Proactive Insights (Future) ───────────────────────────
+  // ── Proactive Insights ─────────────────────────────────────
 
-  /// Check if the Or should proactively suggest something
-  /// Called periodically or on app events
-  Future<String?> checkForProactiveInsight() async {
-    // Future: Analyze user patterns from Hive cache
-    // - "You haven't visited the Workshop in 3 days"
-    // - "You have 5 overdue tasks in Home"  
-    // - "It's Friday — time to review your weekly goals?"
-    return null;
+  /// Check if the Or should proactively suggest something.
+  /// Called periodically or on app events.
+  /// Returns a spoken insight or null if nothing to say.
+  Future<String?> checkForProactiveInsight({
+    int overdueCount = 0,
+    int dueTodayCount = 0,
+    int totalActiveCount = 0,
+    int buildingCount = 0,
+  }) async {
+    final now = DateTime.now();
+
+    // Don't nag more than once per hour
+    final lastInsightKey = 'last_proactive_insight';
+    final lastInsight = await cacheService.getPreference(lastInsightKey);
+    if (lastInsight != null) {
+      final lastTime = DateTime.tryParse(lastInsight);
+      if (lastTime != null && now.difference(lastTime).inMinutes < 60) {
+        return null;
+      }
+    }
+
+    String? insight;
+
+    // Priority 1: Overdue tasks (urgent)
+    if (overdueCount > 0) {
+      insight = overdueCount == 1
+          ? 'You have 1 overdue task. Shall I open your task list?'
+          : 'You have $overdueCount overdue tasks. Want to review them?';
+    }
+    // Priority 2: Tasks due today
+    else if (dueTodayCount > 0) {
+      insight = dueTodayCount == 1
+          ? 'You have a task due today. Stay on track.'
+          : '$dueTodayCount tasks are due today. Let\'s handle them.';
+    }
+    // Priority 3: Time-based suggestions
+    else if (now.hour >= 6 && now.hour <= 8 && totalActiveCount > 0) {
+      insight = 'Good morning. You have $totalActiveCount active tasks. '
+          'What\'s the priority today?';
+    }
+    else if (now.hour >= 17 && now.hour <= 19) {
+      insight = 'Evening review: How did today go? '
+          'Record a memory or review your tasks.';
+    }
+    // Priority 4: Weekly review (Friday/Saturday)
+    else if ((now.weekday == DateTime.friday && now.hour >= 16) ||
+             (now.weekday == DateTime.saturday && now.hour <= 11)) {
+      insight = 'It\'s a good time for a weekly review. '
+          'Reflect on what was accomplished and plan ahead.';
+    }
+    // Priority 5: Empty world nudge
+    else if (buildingCount <= 1 && totalActiveCount == 0) {
+      insight = 'Your world is quiet. Try adding a task or building '
+          'to start shaping your Beit.';
+    }
+
+    // Record that we gave an insight
+    if (insight != null) {
+      await cacheService.setPreference(lastInsightKey, now.toIso8601String());
+      await cacheService.storeInsight(
+        'proactive_${now.millisecondsSinceEpoch}',
+        insight,
+      );
+    }
+
+    return insight;
   }
 
   // ── Helpers ───────────────────────────────────────────────
