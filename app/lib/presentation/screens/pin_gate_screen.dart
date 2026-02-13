@@ -117,12 +117,7 @@ class _PinGateScreenState extends State<PinGateScreen>
 
     // Auto-submit when all 6 digits are entered
     if (_enteredPin.length == 6) {
-      // Small delay to let the last dot animate in
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (_enteredPin.length == 6) {
-          _submitPin();
-        }
-      });
+      _submitPin();
     }
   }
 
