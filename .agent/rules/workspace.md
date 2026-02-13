@@ -1,5 +1,17 @@
 # ⚠️ WORKSPACE RULE — READ BEFORE DOING ANYTHING ⚠️
 
+## 🏛️ CONSTITUTION FIRST
+
+**Before you write a single line of code, read:**
+```
+/Users/tekhletvault/OrBeit AG Build/ORBEIT_CONSTITUTION.md
+```
+This is the supreme authority for this project. All architectural decisions,
+privacy constraints, folder structures, and tech stack choices are defined there.
+If anything in the codebase contradicts the Constitution, the Constitution wins.
+
+---
+
 ## Single Workspace Policy
 
 **Established:** 2026-02-13 by project owner (tekhletvault)
