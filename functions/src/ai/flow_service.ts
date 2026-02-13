@@ -241,16 +241,19 @@ export class FlowService {
             processingTimeMs,
         };
 
+        // Parallelize independent post-processing tasks
+        const promises = [];
+
         // Cache the result
-        await this.cacheEvent(sourceHash, event);
+        promises.push(this.cacheEvent(sourceHash, event));
 
         // Store event in Firestore for sync
         if (userId) {
-            await this.storeEvent(userId, event);
+            promises.push(this.storeEvent(userId, event));
         }
 
         // Log credit usage
-        await this.aiManager.logUsage(
+        promises.push(this.aiManager.logUsage(
             "flow",
             creditCost,
             `distillation_${complexity}`,
@@ -261,7 +264,9 @@ export class FlowService {
                 sourceHash,
                 confidence: event.confidence,
             }
-        );
+        ));
+
+        await Promise.all(promises);
 
         logger.info("Context distillation complete", {
             eventId: event.id,
