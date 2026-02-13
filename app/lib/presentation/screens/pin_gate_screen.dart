@@ -32,10 +32,13 @@ class _PinGateScreenState extends State<PinGateScreen>
     with SingleTickerProviderStateMixin {
   String _enteredPin = '';
   bool _isSettingUp = false;
+  bool _isLoading = true; // Wait for _checkFirstLaunch
+  bool _isSubmitting = false;
   String _setupMasterPin = '';
   String _setupDuressPin = '';
   int _setupStep = 0; // 0=master, 1=confirm master, 2=duress, 3=confirm duress
   bool _showError = false;
+  String _errorMessage = '';
   int _failedAttempts = 0;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -62,13 +65,24 @@ class _PinGateScreenState extends State<PinGateScreen>
   }
 
   Future<void> _checkFirstLaunch() async {
-    final hasMasterPin = await widget.secureStorage.containsKey(SecureKeys.masterPin);
-    debugPrint('[PIN Gate] Has master PIN: $hasMasterPin');
-    if (!hasMasterPin) {
+    try {
+      final hasMasterPin = await widget.secureStorage.containsKey(SecureKeys.masterPin);
+      debugPrint('[PIN Gate] Has master PIN: $hasMasterPin');
+      if (!hasMasterPin) {
+        setState(() {
+          _isSettingUp = true;
+          _setupStep = 0;
+        });
+      }
+    } catch (e) {
+      debugPrint('[PIN Gate] ERROR in _checkFirstLaunch: $e');
+      // Assume first launch if keychain fails
       setState(() {
         _isSettingUp = true;
         _setupStep = 0;
       });
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -104,6 +118,9 @@ class _PinGateScreenState extends State<PinGateScreen>
         default:
           return '';
       }
+    }
+    if (_errorMessage.isNotEmpty) {
+      return _errorMessage;
     }
     if (_failedAttempts > 0) {
       return 'Incorrect PIN';
@@ -145,7 +162,7 @@ class _PinGateScreenState extends State<PinGateScreen>
     // Enter/Return — submit PIN
     if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter) {
       if (_enteredPin.length == 6) {
-        _submitPin();
+        _doSubmit();
       }
       return KeyEventResult.handled;
     }
@@ -154,28 +171,55 @@ class _PinGateScreenState extends State<PinGateScreen>
   }
 
   void _onDigitPressed(String digit) {
-    if (_enteredPin.length >= 6) return;
+    if (_enteredPin.length >= 6 || _isSubmitting) return;
 
     setState(() {
       _enteredPin += digit;
       _showError = false;
+      _errorMessage = '';
     });
 
     debugPrint('[PIN Gate] Digit entered. Length: ${_enteredPin.length}');
 
     // Auto-submit when all 6 digits are entered
     if (_enteredPin.length == 6) {
-      debugPrint('[PIN Gate] 6 digits reached — submitting');
-      _submitPin();
+      debugPrint('[PIN Gate] 6 digits reached — scheduling submit');
+      // Use post-frame callback to ensure UI has updated
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _doSubmit();
+      });
     }
   }
 
   void _onBackspace() {
-    if (_enteredPin.isEmpty) return;
+    if (_enteredPin.isEmpty || _isSubmitting) return;
     setState(() {
       _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
       _showError = false;
+      _errorMessage = '';
     });
+  }
+
+  /// Central submit — called from auto-submit, checkmark, or Enter key
+  Future<void> _doSubmit() async {
+    if (_enteredPin.length != 6 || _isSubmitting) {
+      debugPrint('[PIN Gate] _doSubmit aborted: length=${_enteredPin.length}, submitting=$_isSubmitting');
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      await _submitPin();
+    } catch (e, stack) {
+      debugPrint('[PIN Gate] EXCEPTION in _doSubmit: $e');
+      debugPrint('[PIN Gate] Stack: $stack');
+      setState(() {
+        _showError = true;
+        _errorMessage = 'System error: $e';
+        _enteredPin = '';
+      });
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _submitPin() async {
@@ -300,6 +344,15 @@ class _PinGateScreenState extends State<PinGateScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A14),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+        ),
+      );
+    }
+
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
@@ -456,8 +509,9 @@ class _PinGateScreenState extends State<PinGateScreen>
           return _buildKey(
             key,
             onTap: () {
+              debugPrint('[PIN Gate] Checkmark tapped. Length: ${_enteredPin.length}');
               if (_enteredPin.length == 6) {
-                _submitPin();
+                _doSubmit();
               }
             },
             highlight: _enteredPin.length == 6,
