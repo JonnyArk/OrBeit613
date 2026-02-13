@@ -8,8 +8,8 @@
 /// Looks like a standard app lock screen — nothing suspicious.
 
 import 'package:flutter/material.dart';
-import '../services/secure_storage_service.dart';
-import '../services/duress_mode_service.dart';
+import '../../services/secure_storage_service.dart';
+import '../../services/duress_mode_service.dart';
 
 class PinGateScreen extends StatefulWidget {
   final SecureStorageService secureStorage;
