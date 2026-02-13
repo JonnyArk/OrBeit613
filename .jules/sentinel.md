@@ -1,0 +1,4 @@
+## 2025-05-15 - Unauthenticated AI Endpoints via onRequest
+**Vulnerability:** Critical AI generation endpoints (`generateAsset`, `distillContext`) were exposed as public `onRequest` HTTP functions without authentication checks, allowing unauthorized access and potential resource abuse.
+**Learning:** Using `onRequest` for app-facing functions creates raw HTTP endpoints that bypass Firebase Auth context unless manually verified. The client app was using `httpsCallable`, which implies an expectation of `onCall` semantics, but the backend implementation did not match.
+**Prevention:** Always use `onCall` for functions intended to be called directly from the client app. This automatically provides `request.auth` context. If `onRequest` is necessary (e.g. for webhooks), manual token verification must be implemented.
