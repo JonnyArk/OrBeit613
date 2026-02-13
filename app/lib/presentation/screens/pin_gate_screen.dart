@@ -115,11 +115,11 @@ class _PinGateScreenState extends State<PinGateScreen>
       _showError = false;
     });
 
-    // Auto-submit at 4+ digits (support 4-6 digit PINs)
-    if (_enteredPin.length >= 4) {
-      // Use a small delay to let the UI update
+    // Auto-submit when all 6 digits are entered
+    if (_enteredPin.length == 6) {
+      // Small delay to let the last dot animate in
       Future.delayed(const Duration(milliseconds: 200), () {
-        if (_enteredPin.length >= 4) {
+        if (_enteredPin.length == 6) {
           _submitPin();
         }
       });
