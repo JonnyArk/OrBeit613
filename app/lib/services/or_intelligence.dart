@@ -22,7 +22,6 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'cache_service.dart';
 import 'secure_storage_service.dart';
-import 'voice_service.dart';
 
 /// The Or's personality and behavior configuration
 class OrPersonality {

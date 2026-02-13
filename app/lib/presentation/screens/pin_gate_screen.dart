@@ -105,6 +105,10 @@ class _PinGateScreenState extends State<PinGateScreen>
   }
 
   String get _subtitleText {
+    // Show error message FIRST — regardless of setup/login mode
+    if (_showError && _errorMessage.isNotEmpty) {
+      return _errorMessage;
+    }
     if (_isSettingUp) {
       switch (_setupStep) {
         case 0:
@@ -112,15 +116,12 @@ class _PinGateScreenState extends State<PinGateScreen>
         case 1:
           return 'Enter it again to confirm';
         case 2:
-          return 'Use this if forced to open the app\nIt shows a convincing empty world';
+          return 'Choose a DIFFERENT 6-digit emergency PIN\nUse this if forced to open the app';
         case 3:
           return 'Confirm your emergency PIN';
         default:
           return '';
       }
-    }
-    if (_errorMessage.isNotEmpty) {
-      return _errorMessage;
     }
     if (_failedAttempts > 0) {
       return 'Incorrect PIN';
@@ -240,24 +241,34 @@ class _PinGateScreenState extends State<PinGateScreen>
         _setupMasterPin = pin;
         setState(() {
           _enteredPin = '';
+          _showError = false;
+          _errorMessage = '';
           _setupStep = 1;
         });
+        _refocus();
         debugPrint('[PIN Gate] Master PIN captured, moving to confirm step');
         break;
 
       case 1: // Confirm master PIN
         if (pin == _setupMasterPin) {
-          await widget.secureStorage.setMasterPin(pin);
-          setState(() {
-            _enteredPin = '';
-            _setupStep = 2;
-          });
-          debugPrint('[PIN Gate] Master PIN confirmed & saved, moving to duress step');
+          try {
+            await widget.secureStorage.setMasterPin(pin);
+            setState(() {
+              _enteredPin = '';
+              _showError = false;
+              _errorMessage = '';
+              _setupStep = 2;
+            });
+            _refocus();
+            debugPrint('[PIN Gate] Master PIN confirmed & saved, moving to duress step');
+          } catch (e) {
+            debugPrint('[PIN Gate] ERROR saving master PIN: $e');
+            _triggerErrorWithMessage('Could not save PIN: $e');
+          }
         } else {
           debugPrint('[PIN Gate] Master PIN confirmation FAILED — restarting');
-          _triggerError();
+          _triggerErrorWithMessage('PINs did not match. Try again.');
           setState(() {
-            _enteredPin = '';
             _setupStep = 0;
             _setupMasterPin = '';
           });
@@ -266,34 +277,37 @@ class _PinGateScreenState extends State<PinGateScreen>
 
       case 2: // Set duress PIN
         if (pin == _setupMasterPin) {
-          // Can't use same PIN as master!
           debugPrint('[PIN Gate] Duress PIN same as master — rejected');
-          _triggerError();
-          setState(() {
-            _enteredPin = '';
-          });
+          _triggerErrorWithMessage('Must be different from your main PIN');
           return;
         }
         _setupDuressPin = pin;
         setState(() {
           _enteredPin = '';
+          _showError = false;
+          _errorMessage = '';
           _setupStep = 3;
         });
+        _refocus();
         debugPrint('[PIN Gate] Duress PIN captured, moving to confirm step');
         break;
 
       case 3: // Confirm duress PIN
         if (pin == _setupDuressPin) {
-          await widget.secureStorage.setDuressPin(pin);
-          debugPrint('[PIN Gate] Setup COMPLETE — signing in normally');
-          widget.duressModeService.activateNormalMode();
-          await widget.secureStorage.recordAuth();
-          widget.onAuthenticated();
+          try {
+            await widget.secureStorage.setDuressPin(pin);
+            debugPrint('[PIN Gate] Setup COMPLETE — signing in normally');
+            widget.duressModeService.activateNormalMode();
+            await widget.secureStorage.recordAuth();
+            widget.onAuthenticated();
+          } catch (e) {
+            debugPrint('[PIN Gate] ERROR saving duress PIN: $e');
+            _triggerErrorWithMessage('Could not save PIN: $e');
+          }
         } else {
           debugPrint('[PIN Gate] Duress PIN confirmation FAILED — restarting duress');
-          _triggerError();
+          _triggerErrorWithMessage('PINs did not match. Try again.');
           setState(() {
-            _enteredPin = '';
             _setupStep = 2;
             _setupDuressPin = '';
           });
@@ -340,6 +354,28 @@ class _PinGateScreenState extends State<PinGateScreen>
       _enteredPin = '';
     });
     _shakeController.forward(from: 0);
+    _refocus();
+  }
+
+  /// Trigger error with a specific message visible to the user
+  void _triggerErrorWithMessage(String message) {
+    setState(() {
+      _showError = true;
+      _errorMessage = message;
+      _enteredPin = '';
+    });
+    _shakeController.forward(from: 0);
+    _refocus();
+  }
+
+  /// Re-request focus after state changes to keep keyboard working
+  void _refocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_focusNode.hasFocus) {
+        debugPrint('[PIN Gate] Re-requesting focus');
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override

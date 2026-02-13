@@ -34,7 +34,6 @@ import 'services/auth_service_impl.dart';
 import 'providers/auth_provider.dart';
 import 'services/reminder_service.dart';
 import 'providers/phase3_providers.dart';
-import 'services/voice_command_processor.dart';
 import 'ui/reminder_banner.dart';
 import 'services/duress_mode_service.dart';
 import 'services/calendar_mode_service.dart';

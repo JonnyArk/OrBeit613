@@ -42,7 +42,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   bool _isCreating = false;
   bool _showLetThereBeLight = false;
   bool _showBuildingBurst = false;
-  bool _transitioning = false;
 
   // Animation controllers
   late AnimationController _pulseController;
@@ -524,7 +523,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   Future<void> _advanceToLight() async {
-    final name = _nameController.text.trim();
     // Name was validated in _advanceToCalendar
 
     setState(() => _isCreating = true);
@@ -571,7 +569,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       // Transition to game after the full sequence
       await Future.delayed(const Duration(milliseconds: 4500));
       if (mounted) {
-        setState(() => _transitioning = true);
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
