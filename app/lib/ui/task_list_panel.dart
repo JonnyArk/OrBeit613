@@ -26,6 +26,12 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   bool _loading = true;
   bool _showCompleted = false;
 
+  // Optimized state (memoized)
+  List<domain.Task> _activeTasks = [];
+  List<domain.Task> _completedTasks = [];
+  Map<domain.TaskPriority, List<domain.Task>> _groupedActive = {};
+  int _overdueCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +42,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     final repo = ref.read(taskRepositoryProvider);
     final tasks = await repo.getAllTasks();
     if (mounted) {
+      _processTasks(tasks);
       setState(() {
         _tasks = tasks;
         _loading = false;
@@ -43,33 +50,47 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     }
   }
 
-  // ── Grouping Logic ────────────────────────────────────────
+  void _processTasks(List<domain.Task> tasks) {
+    _activeTasks = [];
+    _completedTasks = [];
+    _groupedActive = {};
+    _overdueCount = 0;
 
-  List<domain.Task> get _activeTasks =>
-      _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+    final now = DateTime.now();
 
-  List<domain.Task> get _completedTasks =>
-      _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
+    for (final task in tasks) {
+      if (task.status == domain.TaskStatus.completed) {
+        _completedTasks.add(task);
+      } else {
+        _activeTasks.add(task);
 
-  Map<domain.TaskPriority, List<domain.Task>> get _groupedActive {
-    final groups = <domain.TaskPriority, List<domain.Task>>{};
+        // Grouping
+        if (!_groupedActive.containsKey(task.priority)) {
+          _groupedActive[task.priority] = [];
+        }
+        _groupedActive[task.priority]!.add(task);
+
+        // Overdue check
+        if (task.dueDate != null && task.dueDate!.isBefore(now)) {
+          _overdueCount++;
+        }
+      }
+    }
+
+    // Ensure priority order
+    final sortedGroups = <domain.TaskPriority, List<domain.Task>>{};
     for (final priority in [
       domain.TaskPriority.urgent,
       domain.TaskPriority.high,
       domain.TaskPriority.medium,
       domain.TaskPriority.low,
     ]) {
-      final tasks = _activeTasks.where((t) => t.priority == priority).toList();
-      if (tasks.isNotEmpty) {
-        groups[priority] = tasks;
+      if (_groupedActive.containsKey(priority)) {
+        sortedGroups[priority] = _groupedActive[priority]!;
       }
     }
-    return groups;
+    _groupedActive = sortedGroups;
   }
-
-  int get _overdueCount => _activeTasks
-      .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
-      .length;
 
   @override
   Widget build(BuildContext context) {
@@ -237,31 +258,45 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
         // Priority groups
         for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
+          SliverToBoxAdapter(
+            child: _buildPriorityHeader(entry.key, entry.value.length),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                final task = entry.value[i];
+                return _SwipeableTaskTile(
+                  task: task,
+                  onComplete: () => _completeTask(task.id),
+                  onDelete: () => _deleteTask(task.id),
+                )
+                    .animate()
+                    .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                    .slideX(begin: 0.05, end: 0, duration: 300.ms);
+              },
+              childCount: entry.value.length,
+            ),
+          ),
         ],
 
         // Completed section (collapsible)
         if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          SliverToBoxAdapter(child: _buildCompletedHeader()),
           if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _CompletedTaskTile(task: _completedTasks[i]),
+                childCount: _completedTasks.length,
+              ),
+            ),
         ],
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
       ],
     );
   }
@@ -412,7 +447,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             priority: priority,
             dueDate: dueDate,
           );
-          Navigator.pop(ctx);
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+          }
           _loadTasks();
         },
       ),
