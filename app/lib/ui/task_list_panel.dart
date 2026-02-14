@@ -612,14 +612,19 @@ class _SwipeableTaskTile extends StatelessWidget {
             ),
           ),
           // Tap to complete
-          GestureDetector(
+          Semantics(
+            label: 'Mark as complete',
+            button: true,
             onTap: onComplete,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.white.withAlpha(40),
-                size: 22,
+            child: GestureDetector(
+              onTap: onComplete,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.white.withAlpha(40),
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -925,44 +930,50 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
       children: domain.TaskPriority.values.map((p) {
         final isSelected = _priority == p;
         return Expanded(
-          child: GestureDetector(
+          child: Semantics(
+            button: true,
+            label: 'Select ${_labelForPriority(p)} priority',
+            selected: isSelected,
             onTap: () => setState(() => _priority = p),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? _colorForPriority(p).withAlpha(30)
-                    : Colors.white.withAlpha(5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
+            child: GestureDetector(
+              onTap: () => setState(() => _priority = p),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
                   color: isSelected
-                      ? _colorForPriority(p).withAlpha(120)
-                      : Colors.white.withAlpha(15),
-                  width: isSelected ? 1.5 : 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.flag,
-                    size: 18,
+                      ? _colorForPriority(p).withAlpha(30)
+                      : Colors.white.withAlpha(5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
                     color: isSelected
-                        ? _colorForPriority(p)
-                        : Colors.white.withAlpha(60),
+                        ? _colorForPriority(p).withAlpha(120)
+                        : Colors.white.withAlpha(15),
+                    width: isSelected ? 1.5 : 1,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _labelForPriority(p),
-                    style: TextStyle(
-                      fontSize: 10,
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.flag,
+                      size: 18,
                       color: isSelected
                           ? _colorForPriority(p)
                           : Colors.white.withAlpha(60),
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _labelForPriority(p),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isSelected
+                            ? _colorForPriority(p)
+                            : Colors.white.withAlpha(60),
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
