@@ -1,0 +1,4 @@
+## 2025-02-17 - Mismatched Protocol Vulnerability
+**Vulnerability:** Backend functions were implemented as public `onRequest` (HTTP) endpoints but consumed by the client app as `onCall` (Callable) functions. This exposed business-critical AI endpoints to the public without authentication and caused a protocol mismatch where request bodies were not parsed correctly.
+**Learning:** The Flutter `cloud_functions` plugin's `httpsCallable` method automatically handles authentication and wraps payloads, expecting the backend to be an `onCall` function. When paired with `onRequest`, security context (`context.auth`) is lost and payload structure (`request.body.data` vs `request.body`) is misaligned.
+**Prevention:** Always implement backend functions intended for client app consumption as `onCall` to leverage automatic auth token verification and correct payload handling. Verify client-side usage (`httpsCallable` vs `http.post`) before implementing backend logic.
