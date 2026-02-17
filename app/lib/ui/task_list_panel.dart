@@ -26,6 +26,12 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   bool _loading = true;
   bool _showCompleted = false;
 
+  // Derived state to avoid re-computation on every build
+  List<domain.Task> _activeTasksList = [];
+  List<domain.Task> _completedTasksList = [];
+  Map<domain.TaskPriority, List<domain.Task>> _groupedTasks = {};
+  int _overdueCountValue = 0;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +42,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     final repo = ref.read(taskRepositoryProvider);
     final tasks = await repo.getAllTasks();
     if (mounted) {
+      _processTasks(tasks);
       setState(() {
         _tasks = tasks;
         _loading = false;
@@ -45,31 +52,30 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
   // ── Grouping Logic ────────────────────────────────────────
 
-  List<domain.Task> get _activeTasks =>
-      _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+  void _processTasks(List<domain.Task> tasks) {
+    _activeTasksList =
+        tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+    _completedTasksList =
+        tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
 
-  List<domain.Task> get _completedTasks =>
-      _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
-
-  Map<domain.TaskPriority, List<domain.Task>> get _groupedActive {
-    final groups = <domain.TaskPriority, List<domain.Task>>{};
+    _groupedTasks = {};
     for (final priority in [
       domain.TaskPriority.urgent,
       domain.TaskPriority.high,
       domain.TaskPriority.medium,
       domain.TaskPriority.low,
     ]) {
-      final tasks = _activeTasks.where((t) => t.priority == priority).toList();
-      if (tasks.isNotEmpty) {
-        groups[priority] = tasks;
+      final pTasks =
+          _activeTasksList.where((t) => t.priority == priority).toList();
+      if (pTasks.isNotEmpty) {
+        _groupedTasks[priority] = pTasks;
       }
     }
-    return groups;
-  }
 
-  int get _overdueCount => _activeTasks
-      .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
-      .length;
+    _overdueCountValue = _activeTasksList
+        .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
+        .length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +98,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       child: Column(
         children: [
           _buildHeader(),
-          if (_overdueCount > 0) _buildOverdueBanner(),
+          if (_overdueCountValue > 0) _buildOverdueBanner(),
           Expanded(child: _buildBody()),
           _buildAddButton(),
         ],
@@ -139,7 +145,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
                   ),
                 ),
                 Text(
-                  '${_activeTasks.length} active · ${_completedTasks.length} done',
+                  '${_activeTasksList.length} active · ${_completedTasksList.length} done',
                   style: const TextStyle(
                     color: Colors.white38,
                     fontSize: 12,
@@ -156,7 +162,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${_activeTasks.length}',
+              '${_activeTasksList.length}',
               style: const TextStyle(
                 color: Color(0xFFD4AF37),
                 fontSize: 14,
@@ -185,7 +191,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
           const Icon(Icons.warning_amber_rounded, color: Color(0xFF9B1B30), size: 18),
           const SizedBox(width: 8),
           Text(
-            '$_overdueCount overdue',
+            '$_overdueCountValue overdue',
             style: const TextStyle(
               color: Color(0xFFE57373),
               fontSize: 13,
@@ -235,32 +241,48 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       );
     }
 
-    final grouped = _groupedActive;
+    final grouped = _groupedTasks;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
+    return CustomScrollView(
+      slivers: [
         // Priority groups
         for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
+          SliverToBoxAdapter(
+            child: _buildPriorityHeader(entry.key, entry.value.length),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final task = entry.value[index];
+                return _SwipeableTaskTile(
+                  task: task,
+                  onComplete: () => _completeTask(task.id),
+                  onDelete: () => _deleteTask(task.id),
+                )
+                    .animate()
+                    .fadeIn(
+                        duration: 300.ms,
+                        delay: Duration(milliseconds: index * 40))
+                    .slideX(begin: 0.05, end: 0, duration: 300.ms);
+              },
+              childCount: entry.value.length,
+            ),
+          ),
         ],
 
         // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
+        if (_completedTasksList.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          SliverToBoxAdapter(child: _buildCompletedHeader()),
           if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  return _CompletedTaskTile(task: _completedTasksList[index]);
+                },
+                childCount: _completedTasksList.length,
+              ),
+            ),
         ],
       ],
     );
@@ -334,7 +356,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Completed (${_completedTasks.length})',
+              'Completed (${_completedTasksList.length})',
               style: const TextStyle(
                 color: Colors.white38,
                 fontSize: 13,
@@ -412,7 +434,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             priority: priority,
             dueDate: dueDate,
           );
-          Navigator.pop(ctx);
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+          }
           _loadTasks();
         },
       ),
