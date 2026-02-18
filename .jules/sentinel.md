@@ -1,0 +1,4 @@
+## 2024-05-22 - Missing Authentication on AI Endpoints
+**Vulnerability:** The `generateAsset`, `distillContext`, and `creditUsage` functions were exposed as public `onRequest` HTTP endpoints without authentication checks, allowing unauthorized access to costly AI services and sensitive usage data.
+**Learning:** Developers likely used `onRequest` for easier initial testing or webhook compatibility but forgot to switch to `onCall` or add manual auth verification before production. The client code was already written to use `httpsCallable`, indicating a mismatch between frontend expectations and backend implementation.
+**Prevention:** Always use `onCall` for backend services intended for the client app, as it automatically handles authentication context. Enforce `if (!request.auth)` checks at the start of every callable function. Use strictly typed request objects to prevent `any` usage.
