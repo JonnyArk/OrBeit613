@@ -599,7 +599,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 // FLOATING PARTICLES
 // ════════════════════════════════════════════════════════════
 
-class _FloatingParticles extends StatelessWidget {
+class _ParticleModel {
+  final double xPercent;
+  final double yPercent;
+  final double speed;
+  final double size;
+  final bool isGold;
+
+  const _ParticleModel(
+    this.xPercent,
+    this.yPercent,
+    this.speed,
+    this.size,
+    this.isGold,
+  );
+}
+
+class _FloatingParticles extends StatefulWidget {
   final AnimationController controller;
   final double brightness;
 
@@ -609,15 +625,48 @@ class _FloatingParticles extends StatelessWidget {
   });
 
   @override
+  State<_FloatingParticles> createState() => _FloatingParticlesState();
+}
+
+class _FloatingParticlesState extends State<_FloatingParticles> {
+  final List<_ParticleModel> _particles = [];
+  final Random _random = Random(42); // Deterministic seed
+
+  @override
+  void initState() {
+    super.initState();
+    _generateParticles();
+  }
+
+  void _generateParticles() {
+    for (int i = 0; i < 40; i++) {
+      final xPercent = _random.nextDouble();
+      final yPercent = _random.nextDouble();
+      final speed = 0.3 + _random.nextDouble() * 0.7;
+      final size = 1.0 + _random.nextDouble() * 2.5;
+      final isGold = i % 3 == 0;
+
+      _particles.add(_ParticleModel(
+        xPercent,
+        yPercent,
+        speed,
+        size,
+        isGold,
+      ));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, child) {
         return CustomPaint(
           size: MediaQuery.of(context).size,
           painter: _ParticlePainter(
-            progress: controller.value,
-            brightness: brightness,
+            progress: widget.controller.value,
+            brightness: widget.brightness,
+            particles: _particles,
           ),
         );
       },
@@ -632,39 +681,44 @@ class _FloatingParticles extends StatelessWidget {
 class _ParticlePainter extends CustomPainter {
   final double progress;
   final double brightness;
-  final Random _random = Random(42); // Deterministic seed
+  final List<_ParticleModel> particles;
 
-  _ParticlePainter({required this.progress, required this.brightness});
+  _ParticlePainter({
+    required this.progress,
+    required this.brightness,
+    required this.particles,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
 
-    for (int i = 0; i < 40; i++) {
-      final baseX = _random.nextDouble() * size.width;
-      final baseY = _random.nextDouble() * size.height;
-      final speed = 0.3 + _random.nextDouble() * 0.7;
-      final particleSize = 1.0 + _random.nextDouble() * 2.5;
+    for (int i = 0; i < particles.length; i++) {
+      final particle = particles[i];
+
+      final baseX = particle.xPercent * size.width;
+      final baseY = particle.yPercent * size.height;
 
       // Gentle floating motion
       final offsetX = sin((progress * 2 * pi) + i * 0.5) * 15;
       final offsetY = cos((progress * 2 * pi) + i * 0.3) * 20 -
-          (progress * speed * size.height * 0.3);
+          (progress * particle.speed * size.height * 0.3);
 
       final x = (baseX + offsetX) % size.width;
       final y = (baseY + offsetY) % size.height;
 
       // Twinkle effect
       final twinkle = (sin(progress * 2 * pi * 3 + i) + 1) / 2;
-      final alpha = (brightness * 255 * (0.3 + twinkle * 0.7)).toInt().clamp(0, 255);
+      final alpha = (brightness * 255 * (0.3 + twinkle * 0.7))
+          .toInt()
+          .clamp(0, 255);
 
       // Gold-ish color with varying warmth
-      final isGold = i % 3 == 0;
-      paint.color = isGold
+      paint.color = particle.isGold
           ? Color.fromARGB(alpha, 212, 175, 55) // Gold
           : Color.fromARGB(alpha, 245, 240, 232); // Warm white
 
-      canvas.drawCircle(Offset(x, y), particleSize, paint);
+      canvas.drawCircle(Offset(x, y), particle.size, paint);
     }
   }
 
