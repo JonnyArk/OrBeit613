@@ -202,11 +202,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           AnimatedOpacity(
             opacity: _showPulse ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 800),
-            child: GestureDetector(
+            child: Semantics(
+              button: true,
+              label: 'Begin onboarding',
               onTap: _advanceToFoundation,
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
+              child: GestureDetector(
+                onTap: _advanceToFoundation,
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
                   final scale = 1.0 + _pulseController.value * 0.15;
                   final glowAlpha = (80 + _pulseController.value * 60).toInt();
                   return Container(
@@ -241,6 +245,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 },
               ),
             ),
+          ),
           ),
 
           const SizedBox(height: 24),
@@ -302,33 +307,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             // Name input
             SizedBox(
               width: 280,
-              child: TextField(
-                controller: _nameController,
-                textAlign: TextAlign.center,
-                autofocus: true,
-                style: const TextStyle(
-                  color: Color(0xFFD4AF37),
-                  fontSize: 20,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'My Sanctum',
-                  hintStyle: TextStyle(
-                    color: const Color(0xFFD4AF37).withAlpha(40),
+              child: Semantics(
+                label: 'World Name',
+                child: TextField(
+                  controller: _nameController,
+                  textAlign: TextAlign.center,
+                  autofocus: true,
+                  style: const TextStyle(
+                    color: Color(0xFFD4AF37),
                     fontSize: 20,
                     letterSpacing: 1.5,
+                    fontWeight: FontWeight.w500,
                   ),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFFD4AF37),
-                      width: 1,
+                  decoration: InputDecoration(
+                    hintText: 'My Sanctum',
+                    hintStyle: TextStyle(
+                      color: const Color(0xFFD4AF37).withAlpha(40),
+                      fontSize: 20,
+                      letterSpacing: 1.5,
                     ),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFFD4AF37),
-                      width: 2,
+                    enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0xFFD4AF37),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0xFFD4AF37),
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
