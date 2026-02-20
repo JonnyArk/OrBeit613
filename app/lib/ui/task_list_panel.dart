@@ -412,8 +412,10 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             priority: priority,
             dueDate: dueDate,
           );
-          Navigator.pop(ctx);
-          _loadTasks();
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+            _loadTasks();
+          }
         },
       ),
     );
@@ -614,12 +616,16 @@ class _SwipeableTaskTile extends StatelessWidget {
           // Tap to complete
           GestureDetector(
             onTap: onComplete,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.white.withAlpha(40),
-                size: 22,
+            child: Semantics(
+              button: true,
+              label: 'Mark as complete',
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.white.withAlpha(40),
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -927,10 +933,14 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
         return Expanded(
           child: GestureDetector(
             onTap: () => setState(() => _priority = p),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
+            child: Semantics(
+              button: true,
+              label: '${_labelForPriority(p)} priority',
+              selected: isSelected,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
                 color: isSelected
                     ? _colorForPriority(p).withAlpha(30)
                     : Colors.white.withAlpha(5),
@@ -964,6 +974,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                   ),
                 ],
               ),
+            ),
             ),
           ),
         );
