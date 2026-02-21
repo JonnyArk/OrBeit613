@@ -237,31 +237,52 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(child: SizedBox(height: 8)), // Top padding
+
         // Priority groups
         for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
+          SliverToBoxAdapter(
+            child: _buildPriorityHeader(entry.key, entry.value.length),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                final task = entry.value[i];
+                return _SwipeableTaskTile(
+                  task: task,
+                  onComplete: () => _completeTask(task.id),
+                  onDelete: () => _deleteTask(task.id),
+                )
+                    .animate()
+                    .fadeIn(
+                      duration: 300.ms,
+                      // Optimization: Use modulo-based delay to stagger visible items
+                      // without accumulating large delays for long lists.
+                      delay: Duration(milliseconds: (i % 10) * 30),
+                    )
+                    .slideX(begin: 0.05, end: 0, duration: 300.ms);
+              },
+              childCount: entry.value.length,
+            ),
+          ),
         ],
 
         // Completed section (collapsible)
         if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          SliverToBoxAdapter(child: _buildCompletedHeader()),
           if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _CompletedTaskTile(task: _completedTasks[i]),
+                childCount: _completedTasks.length,
+              ),
+            ),
         ],
+
+        const SliverToBoxAdapter(child: SizedBox(height: 8)), // Bottom padding
       ],
     );
   }
