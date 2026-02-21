@@ -22,37 +22,65 @@
 export declare const healthCheck: import("firebase-functions/v2/https").HttpsFunction;
 /**
  * Credit usage summary endpoint for monitoring AI resource consumption.
+ * Secure callable function requiring authentication.
  *
- * @param _request - The incoming HTTP request
- * @param response - The HTTP response object
- * @returns JSON response with credit usage statistics
+ * @param request - The callable request
+ * @returns Promise resolving to JSON response with credit usage statistics
+ * @throws {HttpsError} If user is not authenticated or internal error occurs
  *
  * @example
- * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
+ * // Client-side usage:
+ * // const functions = getFunctions();
+ * // const creditUsage = httpsCallable(functions, 'creditUsage');
+ * // const result = await creditUsage();
  */
-export declare const creditUsage: import("firebase-functions/v2/https").HttpsFunction;
+export declare const creditUsage: import("firebase-functions/v2/https").CallableFunction<any, Promise<{
+    success: boolean;
+    data: {
+        monthlyUsed: number;
+        monthlyLimit: number;
+        remaining: number;
+        percentageUsed: number;
+        estimatedDaysRemaining: number;
+    };
+    timestamp: string;
+}>, unknown>;
 /**
  * Generate visual asset using Whisk service.
  * Implements the Sovereign Sanctum aesthetic with caching.
+ * Secure callable function requiring authentication.
  *
- * @param request - HTTP request with AssetGenerationRequest body
- * @param response - HTTP response with generated asset URL
+ * @param request - The callable request containing AssetGenerationRequest data
+ * @returns Promise resolving to object with generated asset URL
+ * @throws {HttpsError} If user is not authenticated or input is invalid
  *
  * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
- * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
+ * // Client-side usage:
+ * // const generateAsset = httpsCallable(functions, 'generateAsset');
+ * // const result = await generateAsset({ assetType: 'badge', context: '...' });
  */
-export declare const generateAsset: import("firebase-functions/v2/https").HttpsFunction;
+export declare const generateAsset: import("firebase-functions/v2/https").CallableFunction<any, Promise<{
+    success: boolean;
+    data: import("./ai").AssetGenerationResponse;
+    timestamp: string;
+}>, unknown>;
 /**
  * Distill raw context into structured Life Event using Flow service.
  * Implements the Sovereign Pipeline for context processing.
+ * Secure callable function requiring authentication.
  *
- * @param request - HTTP request with DistillationRequest body
- * @param response - HTTP response with structured Life Event
+ * @param request - The callable request containing DistillationRequest data
+ * @returns Promise resolving to object with structured Life Event
+ * @throws {HttpsError} If user is not authenticated or input is invalid
  *
  * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
- * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
+ * // Client-side usage:
+ * // const distillContext = httpsCallable(functions, 'distillContext');
+ * // const result = await distillContext({ rawData: '...', dataType: 'note_text' });
  */
-export declare const distillContext: import("firebase-functions/v2/https").HttpsFunction;
+export declare const distillContext: import("firebase-functions/v2/https").CallableFunction<any, Promise<{
+    success: boolean;
+    data: import("./ai").DistillationResponse;
+    timestamp: string;
+}>, unknown>;
 //# sourceMappingURL=index.d.ts.map

@@ -73,142 +73,140 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
  */
 exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
-    const aiManager = (0, ai_1.getAIManager)();
-    const usageSummary = await aiManager.getUsageSummary();
+    // Note: Removed credit usage details to prevent information leakage
     response.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development",
-        credits: {
-            remaining: usageSummary.remaining,
-            percentageUsed: usageSummary.percentageUsed.toFixed(1) + "%",
-        },
     });
 });
 /**
  * Credit usage summary endpoint for monitoring AI resource consumption.
+ * Secure callable function requiring authentication.
  *
- * @param _request - The incoming HTTP request
- * @param response - The HTTP response object
- * @returns JSON response with credit usage statistics
+ * @param request - The callable request
+ * @returns Promise resolving to JSON response with credit usage statistics
+ * @throws {HttpsError} If user is not authenticated or internal error occurs
  *
  * @example
- * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
+ * // Client-side usage:
+ * // const functions = getFunctions();
+ * // const creditUsage = httpsCallable(functions, 'creditUsage');
+ * // const result = await creditUsage();
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "User must be authenticated");
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
-        logger.info("Credit usage requested", summary);
-        response.json({
+        logger.info("Credit usage requested", {
+            uid: request.auth.uid,
+            summary,
+        });
+        return {
             success: true,
             data: summary,
             timestamp: new Date().toISOString(),
-        });
+        };
     }
     catch (error) {
         logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
-            success: false,
-            error: "Failed to retrieve credit usage",
-        });
+        throw new https_1.HttpsError("internal", "Failed to retrieve credit usage");
     }
 });
 /**
  * Generate visual asset using Whisk service.
  * Implements the Sovereign Sanctum aesthetic with caching.
+ * Secure callable function requiring authentication.
  *
- * @param request - HTTP request with AssetGenerationRequest body
- * @param response - HTTP response with generated asset URL
+ * @param request - The callable request containing AssetGenerationRequest data
+ * @returns Promise resolving to object with generated asset URL
+ * @throws {HttpsError} If user is not authenticated or input is invalid
  *
  * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
- * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
+ * // Client-side usage:
+ * // const generateAsset = httpsCallable(functions, 'generateAsset');
+ * // const result = await generateAsset({ assetType: 'badge', context: '...' });
  */
-exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
+exports.generateAsset = (0, https_1.onCall)({ secrets: [googleAIUltraKey] }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "User must be authenticated");
     }
     try {
-        const body = request.body;
+        const data = request.data;
         // Validate required fields
-        if (!body.assetType || !body.context) {
-            response.status(400).json({
-                error: "Missing required fields: assetType and context",
-            });
-            return;
+        if (!data.assetType || !data.context) {
+            throw new https_1.HttpsError("invalid-argument", "Missing required fields: assetType and context");
         }
+        // Securely set userId from auth token
+        data.userId = request.auth.uid;
         logger.info("Asset generation request received", {
-            assetType: body.assetType,
-            size: body.size || "medium",
+            uid: request.auth.uid,
+            assetType: data.assetType,
+            size: data.size || "medium",
         });
         const whiskService = (0, ai_1.getWhiskService)();
-        const result = await whiskService.generateAsset(body);
-        response.json({
+        const result = await whiskService.generateAsset(data);
+        return {
             success: true,
             data: result,
             timestamp: new Date().toISOString(),
-        });
+        };
     }
     catch (error) {
         logger.error("Asset generation failed", { error });
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
+        throw new https_1.HttpsError("internal", errorMessage);
     }
 });
 /**
  * Distill raw context into structured Life Event using Flow service.
  * Implements the Sovereign Pipeline for context processing.
+ * Secure callable function requiring authentication.
  *
- * @param request - HTTP request with DistillationRequest body
- * @param response - HTTP response with structured Life Event
+ * @param request - The callable request containing DistillationRequest data
+ * @returns Promise resolving to object with structured Life Event
+ * @throws {HttpsError} If user is not authenticated or input is invalid
  *
  * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
- * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
+ * // Client-side usage:
+ * // const distillContext = httpsCallable(functions, 'distillContext');
+ * // const result = await distillContext({ rawData: '...', dataType: 'note_text' });
  */
-exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
+exports.distillContext = (0, https_1.onCall)({ secrets: [googleAIUltraKey] }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "User must be authenticated");
     }
     try {
-        const body = request.body;
+        const data = request.data;
         // Validate required fields
-        if (!body.rawData || !body.dataType) {
-            response.status(400).json({
-                error: "Missing required fields: rawData and dataType",
-            });
-            return;
+        if (!data.rawData || !data.dataType) {
+            throw new https_1.HttpsError("invalid-argument", "Missing required fields: rawData and dataType");
         }
+        // Securely set userId from auth token
+        data.userId = request.auth.uid;
         logger.info("Context distillation request received", {
-            dataType: body.dataType,
-            complexity: body.complexity || "standard",
-            inputLength: body.rawData.length,
+            uid: request.auth.uid,
+            dataType: data.dataType,
+            complexity: data.complexity || "standard",
+            inputLength: data.rawData.length,
         });
         const flowService = (0, ai_1.getFlowService)();
-        const result = await flowService.distillContext(body);
-        response.json({
+        const result = await flowService.distillContext(data);
+        return {
             success: true,
             data: result,
             timestamp: new Date().toISOString(),
-        });
+        };
     }
     catch (error) {
         logger.error("Context distillation failed", { error });
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
+        throw new https_1.HttpsError("internal", errorMessage);
     }
 });
 //# sourceMappingURL=index.js.map
