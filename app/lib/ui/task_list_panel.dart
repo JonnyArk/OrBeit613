@@ -26,6 +26,12 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   bool _loading = true;
   bool _showCompleted = false;
 
+  // Optimized state to prevent recalculation on every build
+  List<domain.Task> _activeTasks = [];
+  List<domain.Task> _completedTasks = [];
+  Map<domain.TaskPriority, List<domain.Task>> _groupedActive = {};
+  int _overdueCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -39,20 +45,20 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       setState(() {
         _tasks = tasks;
         _loading = false;
+        _processTasks();
       });
     }
   }
 
   // ── Grouping Logic ────────────────────────────────────────
 
-  List<domain.Task> get _activeTasks =>
-      _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+  void _processTasks() {
+    _activeTasks =
+        _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+    _completedTasks =
+        _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
 
-  List<domain.Task> get _completedTasks =>
-      _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
-
-  Map<domain.TaskPriority, List<domain.Task>> get _groupedActive {
-    final groups = <domain.TaskPriority, List<domain.Task>>{};
+    _groupedActive = {};
     for (final priority in [
       domain.TaskPriority.urgent,
       domain.TaskPriority.high,
@@ -61,15 +67,14 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     ]) {
       final tasks = _activeTasks.where((t) => t.priority == priority).toList();
       if (tasks.isNotEmpty) {
-        groups[priority] = tasks;
+        _groupedActive[priority] = tasks;
       }
     }
-    return groups;
-  }
 
-  int get _overdueCount => _activeTasks
-      .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
-      .length;
+    _overdueCount = _activeTasks
+        .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
+        .length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +255,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
               onDelete: () => _deleteTask(entry.value[i].id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .fadeIn(
+                    duration: 300.ms,
+                    delay: Duration(milliseconds: (i % 10) * 40))
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 
