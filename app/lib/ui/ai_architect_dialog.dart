@@ -5,7 +5,7 @@ import '../providers/ai_service_provider.dart';
 import '../providers/building_provider.dart';
 import '../providers/life_event_provider.dart';
 import '../services/ai_interface.dart';
-import '../data/repositories/life_event_repository_impl.dart';
+import '../domain/entities/life_event.dart';
 
 class AIArchitectDialog extends ConsumerStatefulWidget {
   const AIArchitectDialog({super.key});

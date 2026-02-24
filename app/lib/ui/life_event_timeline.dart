@@ -13,7 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../data/repositories/life_event_repository_impl.dart';
+import '../domain/entities/life_event.dart';
 import '../providers/life_event_provider.dart';
 
 /// Life Event Timeline panel widget

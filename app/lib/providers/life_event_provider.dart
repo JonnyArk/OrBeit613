@@ -3,6 +3,7 @@
 /// Riverpod provider for life event data access.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../domain/repositories/life_event_repository.dart';
 import '../data/repositories/life_event_repository_impl.dart';
 import 'database_provider.dart';
 

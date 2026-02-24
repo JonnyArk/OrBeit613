@@ -7,12 +7,16 @@
 /// LifeEvents form the narrative of the user's existence. They're not
 /// just calendar entries—they're the story of a life, spatially anchored
 /// and AI-enhanced for recall and pattern recognition.
+
+/// Types of life events
+enum LifeEventType { purchase, appointment, milestone, memory }
+
 class LifeEvent {
   /// Unique identifier for this event
   final int id;
 
-  /// Event type: 'purchase', 'appointment', 'milestone', 'memory'
-  final String eventType;
+  /// Event type: purchase, appointment, milestone, memory
+  final LifeEventType eventType;
 
   /// Event title
   final String title;
@@ -26,8 +30,8 @@ class LifeEvent {
   /// When the event occurred
   final DateTime occurredAt;
 
-  /// JSON-encoded metadata (receipts, links, etc.)
-  final String? metadata;
+  /// Metadata (receipts, links, etc.)
+  final Map<String, dynamic>? metadata;
 
   /// Created timestamp
   final DateTime createdAt;
@@ -43,15 +47,15 @@ class LifeEvent {
     required this.createdAt,
   });
 
-  /// Creates a copy with optional field overrides
+  /// Creates a copy with modified fields
   LifeEvent copyWith({
     int? id,
-    String? eventType,
+    LifeEventType? eventType,
     String? title,
     String? description,
     String? locationLabel,
     DateTime? occurredAt,
-    String? metadata,
+    Map<String, dynamic>? metadata,
     DateTime? createdAt,
   }) {
     return LifeEvent(
