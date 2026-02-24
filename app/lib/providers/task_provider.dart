@@ -6,7 +6,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/task_repository_impl.dart';
 import '../domain/entities/task.dart';
-import '../domain/entities/task_repository.dart';
+import '../domain/repositories/task_repository.dart';
 import 'database_provider.dart';
 import 'building_provider.dart';
 
