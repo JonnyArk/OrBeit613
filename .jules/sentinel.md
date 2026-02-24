@@ -1,0 +1,4 @@
+## 2026-02-05 - Auth Bypass on AI Endpoints
+**Vulnerability:** Critical AI service endpoints (`generateAsset`, `distillContext`, `creditUsage`) were exposed as public `onRequest` HTTP functions without authentication checks, allowing unrestricted access to paid resources.
+**Learning:** The project used `onRequest` (raw HTTP) instead of `onCall` (Callable Functions), likely due to a misunderstanding of how Firebase Authentication integration works automatically with `onCall` but requires manual verification with `onRequest`.
+**Prevention:** Always use `onCall` for backend functions that require user authentication. If `onRequest` is necessary (e.g., for webhooks), explicitly verify the `Authorization` header or `request.auth` (if using Firebase Hosting integration) at the very start of the function.
