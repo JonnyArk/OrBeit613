@@ -315,39 +315,44 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   // ── Completed Section Header ──────────────────────────────
 
   Widget _buildCompletedHeader() {
-    return GestureDetector(
-      onTap: () => setState(() => _showCompleted = !_showCompleted),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withAlpha(10)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              _showCompleted ? Icons.expand_less : Icons.expand_more,
-              color: Colors.white38,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Completed (${_completedTasks.length})',
-              style: const TextStyle(
+    return Semantics(
+      button: true,
+      label: _showCompleted ? 'Hide completed tasks' : 'Show completed tasks',
+      expanded: _showCompleted,
+      child: GestureDetector(
+        onTap: () => setState(() => _showCompleted = !_showCompleted),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withAlpha(10)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _showCompleted ? Icons.expand_less : Icons.expand_more,
                 color: Colors.white38,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+                size: 20,
               ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.check_circle_outline,
-              color: Colors.green.withAlpha(80),
-              size: 16,
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                'Completed (${_completedTasks.length})',
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green.withAlpha(80),
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -612,14 +617,18 @@ class _SwipeableTaskTile extends StatelessWidget {
             ),
           ),
           // Tap to complete
-          GestureDetector(
-            onTap: onComplete,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.white.withAlpha(40),
-                size: 22,
+          Semantics(
+            button: true,
+            label: 'Mark as complete',
+            child: GestureDetector(
+              onTap: onComplete,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.white.withAlpha(40),
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -998,12 +1007,16 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             ),
             const Spacer(),
             if (_dueDate != null)
-              GestureDetector(
-                onTap: () => setState(() => _dueDate = null),
-                child: Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white.withAlpha(60),
+              Semantics(
+                button: true,
+                label: 'Clear due date',
+                child: GestureDetector(
+                  onTap: () => setState(() => _dueDate = null),
+                  child: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.white.withAlpha(60),
+                  ),
                 ),
               )
             else
