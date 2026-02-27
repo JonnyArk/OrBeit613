@@ -38,6 +38,13 @@ export interface CreditUsageEntry {
     metadata?: Record<string, unknown>;
 }
 
+/** Monthly aggregate of credit usage */
+export interface MonthlyAggregate {
+    totalUsed: number;
+    lastUpdated: FirebaseFirestore.Timestamp;
+    monthKey: string;
+}
+
 /** Result of a credit check operation */
 export interface CreditCheckResult {
     allowed: boolean;
@@ -183,8 +190,19 @@ export class AIManager {
     async getMonthlyUsage(): Promise<number> {
         try {
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
+            // Try to get from aggregate first (O(1))
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+            const aggregateDoc = await aggregateRef.get();
+
+            if (aggregateDoc.exists) {
+                const data = aggregateDoc.data() as MonthlyAggregate;
+                return data.totalUsed;
+            }
+
+            // Fallback to query (O(N)) if aggregate missing
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
             const snapshot = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
@@ -195,6 +213,20 @@ export class AIManager {
                 const data = doc.data() as CreditUsageEntry;
                 total += data.creditsUsed || 0;
             });
+
+            // Backfill aggregate for next time
+            if (total > 0) {
+                try {
+                    await aggregateRef.create({
+                        totalUsed: total,
+                        lastUpdated: FieldValue.serverTimestamp(),
+                        monthKey,
+                    });
+                } catch (e) {
+                    // Ignore already exists error (concurrent write won)
+                    logger.debug("Aggregate created concurrently", { monthKey, error: e });
+                }
+            }
 
             return total;
         } catch (error) {
