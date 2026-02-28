@@ -1,0 +1,3 @@
+## 2024-05-24 - Unbounded Animation Delays in Virtualized Lists
+**Learning:** Using a linear delay multiplier (e.g., `index * 50ms`) for list item entrance animations in a virtualized list like `ListView.builder` creates massive performance and UX bottlenecks. Since items are rendered lazily as they scroll into view, an item at `index=100` might wait 5 full seconds before animating in, leaving a blank space for the user.
+**Action:** Always use a modulo-based bound (e.g., `(index % 10) * 50ms`) for staggered entrance animations inside any lazy-loading or virtualized list to ensure items appear promptly regardless of their absolute index.
