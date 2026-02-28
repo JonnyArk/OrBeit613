@@ -1,0 +1,4 @@
+## 2025-02-28 - Unused Validation Helper in Storage Rules
+**Vulnerability:** The `isImage()` validation helper was defined in `storage.rules` but not applied to the `users/{userId}/{allPaths=**}` match block. This allowed users to upload non-image files to their directories despite the apparent intent to restrict uploads to images only. This could lead to malicious files being uploaded or unexpected behavior in the application.
+**Learning:** Having security helper functions defined is not enough; they must be actively and correctly applied to the relevant rules. We must also be mindful of `request.resource` being `null` during delete operations, so the validation check needs to account for this (`request.resource == null || (isValidSize() && isImage())`).
+**Prevention:** Always verify that security helper functions are actually used in the appropriate `allow` statements. Ensure rule validations properly account for all intended operations (like deletes).

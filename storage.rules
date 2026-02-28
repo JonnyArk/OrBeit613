@@ -35,7 +35,8 @@ service firebase.storage {
     // Users can only upload to their own folder
     match /users/{userId}/{allPaths=**} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && isValidSize();
+      // Ensure uploaded files are images, but allow deletes (where request.resource is null)
+      allow write: if isOwner(userId) && (request.resource == null || (isValidSize() && isImage()));
     }
     
     // =====================================================
