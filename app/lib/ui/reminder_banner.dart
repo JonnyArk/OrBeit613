@@ -44,13 +44,10 @@ class _ReminderBannerState extends State<ReminderBanner>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
 
     _subscription = widget.reminderStream.listen(_onReminder);
   }
@@ -108,68 +105,75 @@ class _ReminderBannerState extends State<ReminderBanner>
       right: 16,
       child: SlideTransition(
         position: _slideAnimation,
-        child: GestureDetector(
-          onTap: _onTap,
-          onHorizontalDragEnd: (_) => _dismiss(),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E).withAlpha(230),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFD4AF37).withAlpha(80),
-                width: 1,
+        child: Semantics(
+          button: true,
+          label: 'Reminder: ${_currentReminder!.title}',
+          child: GestureDetector(
+            onTap: _onTap,
+            onHorizontalDragEnd: (_) => _dismiss(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E).withAlpha(230),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withAlpha(80),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(100),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(100),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _iconForType(_currentReminder!.type),
-                  color: const Color(0xFFD4AF37),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _currentReminder!.title,
-                        style: const TextStyle(
-                          color: Color(0xFFE0E0E0),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        _currentReminder!.body,
-                        style: const TextStyle(
-                          color: Color(0xFF808080),
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+              child: Row(
+                children: [
+                  Icon(
+                    _iconForType(_currentReminder!.type),
+                    color: const Color(0xFFD4AF37),
+                    size: 20,
                   ),
-                ),
-                GestureDetector(
-                  onTap: _dismiss,
-                  child: const Icon(
-                    Icons.close,
-                    color: Color(0xFF808080),
-                    size: 16,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _currentReminder!.title,
+                          style: const TextStyle(
+                            color: Color(0xFFE0E0E0),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          _currentReminder!.body,
+                          style: const TextStyle(
+                            color: Color(0xFF808080),
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    onPressed: _dismiss,
+                    tooltip: 'Dismiss reminder',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Color(0xFF808080),
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
