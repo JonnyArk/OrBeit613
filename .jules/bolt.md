@@ -1,0 +1,3 @@
+## 2024-05-24 - Virtualizing Eager Lists with Modulo Animations
+**Learning:** Found an eager `ListView(children: [...])` implementation with `.animate().fadeIn(delay: index * 40ms)` which forces synchronous element creation of all children. More critically, linear animation delays cause newly created off-screen tasks or tasks at the bottom of long lists to have unbounded delay times before appearing.
+**Action:** Replaced `ListView` with `CustomScrollView` + `SliverList(delegate: SliverChildBuilderDelegate)` to lazily construct widgets for virtualization. Flatted header/body structures to support standard indexing. Used modulo delay `(index % 10) * 40ms` for staggered entry animations to prevent unbounded wait times on large sets.
