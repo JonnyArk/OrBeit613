@@ -237,31 +237,65 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // Flatten data for true lazy virtualization
+    final items = <dynamic>[];
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
+    // Priority groups
+    for (final entry in grouped.entries) {
+      items.add({'type': 'priorityHeader', 'priority': entry.key, 'count': entry.value.length});
+      for (var i = 0; i < entry.value.length; i++) {
+        items.add({'type': 'activeTask', 'task': entry.value[i], 'index': i});
+      }
+    }
+
+    // Completed section (collapsible)
+    if (_completedTasks.isNotEmpty) {
+      items.add({'type': 'spacer'});
+      items.add({'type': 'completedHeader'});
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add({'type': 'completedTask', 'task': task});
+        }
+      }
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final item = items[index];
+                switch (item['type']) {
+                  case 'priorityHeader':
+                    return _buildPriorityHeader(item['priority'], item['count']);
+                  case 'activeTask':
+                    final task = item['task'] as domain.Task;
+                    final i = item['index'] as int;
+                    return _SwipeableTaskTile(
+                      task: task,
+                      onComplete: () => _completeTask(task.id),
+                      onDelete: () => _deleteTask(task.id),
+                    )
+                        .animate()
+                        // Modulo delay to prevent unbounded delays in large lists
+                        .fadeIn(duration: 300.ms, delay: Duration(milliseconds: (i % 10) * 40))
+                        .slideX(begin: 0.05, end: 0, duration: 300.ms);
+                  case 'spacer':
+                    return const SizedBox(height: 8);
+                  case 'completedHeader':
+                    return _buildCompletedHeader();
+                  case 'completedTask':
+                    return _CompletedTaskTile(task: item['task'] as domain.Task);
+                  default:
+                    return const SizedBox.shrink();
+                }
+              },
+              childCount: items.length,
+            ),
+          ),
+        ),
       ],
     );
   }
