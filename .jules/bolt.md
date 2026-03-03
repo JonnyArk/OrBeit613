@@ -1,0 +1,3 @@
+## 2024-05-19 - Unbounded Animation Delays in Virtualized Lists
+**Learning:** Using `flutter_animate` within a `ListView.builder` with a linear delay formula (`index * duration`) causes severe performance and UI issues for long virtualized lists. Items rendered further down the list will have huge animation delays, appearing very late when scrolled into view and defeating the purpose of virtualization.
+**Action:** Always use a modulo-based approach (e.g., `(index % 10) * duration`) for animation delays inside virtualized lists (`ListView.builder`, `SliverList`) to ensure items animate in quickly as the user scrolls.
