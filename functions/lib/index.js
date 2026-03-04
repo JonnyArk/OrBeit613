@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -88,6 +89,29 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
     });
 });
 /**
+ * Validate authorization header
+ * @param req The incoming request
+ * @param res The outgoing response
+ * @returns the decoded token or null
+ */
+async function validateAuth(req, res) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+        return null;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decodedToken;
+    }
+    catch (error) {
+        logger.error("Error verifying auth token", { error });
+        res.status(401).json({ error: "Unauthorized: Invalid token" });
+        return null;
+    }
+}
+/**
  * Credit usage summary endpoint for monitoring AI resource consumption.
  *
  * @param _request - The incoming HTTP request
@@ -97,7 +121,10 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const decodedToken = await validateAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,6 +160,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const decodedToken = await validateAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -142,6 +172,8 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
             });
             return;
         }
+        // Securely inject userId
+        body.userId = decodedToken.uid;
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
@@ -180,6 +212,9 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const decodedToken = await validateAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -189,6 +224,8 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             });
             return;
         }
+        // Securely inject userId
+        body.userId = decodedToken.uid;
         logger.info("Context distillation request received", {
             dataType: body.dataType,
             complexity: body.complexity || "standard",
