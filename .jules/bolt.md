@@ -1,0 +1,3 @@
+## 2026-03-04 - Bounded Animation Delays in Virtualized Lists
+**Learning:** Using linear delays (`delay: Duration(milliseconds: index * 50)`) inside `ListView.builder` or long `ListView`s with `flutter_animate` causes items deep in the list to have massive, multi-second wait times before appearing when users scroll quickly. This ruins perceived performance and feels like the app is hanging.
+**Action:** Always use a modulo-based approach (e.g., `delay: Duration(milliseconds: (index % 10) * 50)`) for animations in lists to cap the maximum delay while preserving the cascading effect for items currently visible.
