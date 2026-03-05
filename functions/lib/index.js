@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -60,6 +61,27 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+/**
+ * Verifies the authorization header and returns the authenticated user's ID.
+ */
+async function verifyAuth(request, response) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        logger.warn("Unauthenticated request blocked");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const idToken = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+        return decodedToken.uid;
+    }
+    catch (error) {
+        logger.error("Error verifying auth token", { error });
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -97,7 +119,11 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // Authenticate request
+    const userId = await verifyAuth(request, response);
+    if (!userId)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -134,6 +160,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        // Authenticate request
+        const userId = await verifyAuth(request, response);
+        if (!userId)
+            return;
         const body = request.body;
         // Validate required fields
         if (!body.assetType || !body.context) {
@@ -142,9 +172,12 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
             });
             return;
         }
+        // Inject authenticated userId securely into request
+        body.userId = userId;
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
+            userId,
         });
         const whiskService = (0, ai_1.getWhiskService)();
         const result = await whiskService.generateAsset(body);
@@ -181,6 +214,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        // Authenticate request
+        const userId = await verifyAuth(request, response);
+        if (!userId)
+            return;
         const body = request.body;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
@@ -189,10 +226,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             });
             return;
         }
+        // Inject authenticated userId securely into request
+        body.userId = userId;
         logger.info("Context distillation request received", {
             dataType: body.dataType,
             complexity: body.complexity || "standard",
             inputLength: body.rawData.length,
+            userId,
         });
         const flowService = (0, ai_1.getFlowService)();
         const result = await flowService.distillContext(body);
