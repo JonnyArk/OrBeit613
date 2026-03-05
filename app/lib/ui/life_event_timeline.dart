@@ -275,7 +275,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: (index % 10) * 50))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
