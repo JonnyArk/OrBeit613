@@ -275,7 +275,8 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                // ⚡ Bolt: Use modulo for delay to prevent unbounded delays for large datasets
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: (index % 10) * 50))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
@@ -382,7 +383,9 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
             locationLabel: location,
             occurredAt: date,
           );
-          Navigator.pop(ctx);
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+          }
           _loadEvents();
         },
       ),
@@ -1004,6 +1007,7 @@ class _AddLifeEventSheetState extends State<_AddLifeEventSheet> {
     );
 
     if (picked != null) {
+      if (!context.mounted) return;
       final time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(_selectedDate),

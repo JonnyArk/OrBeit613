@@ -26,6 +26,12 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   bool _loading = true;
   bool _showCompleted = false;
 
+  // Memoized state for performance
+  List<domain.Task> _activeTasks = [];
+  List<domain.Task> _completedTasks = [];
+  Map<domain.TaskPriority, List<domain.Task>> _groupedActive = {};
+  int _overdueCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +44,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     if (mounted) {
       setState(() {
         _tasks = tasks;
+        _processTasks();
         _loading = false;
       });
     }
@@ -45,31 +52,30 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
   // ── Grouping Logic ────────────────────────────────────────
 
-  List<domain.Task> get _activeTasks =>
-      _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+  void _processTasks() {
+    // ⚡ Bolt: Memoize expensive computations outside the build method
+    // to reduce render overhead.
+    _activeTasks = _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+    _completedTasks = _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
 
-  List<domain.Task> get _completedTasks =>
-      _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
-
-  Map<domain.TaskPriority, List<domain.Task>> get _groupedActive {
-    final groups = <domain.TaskPriority, List<domain.Task>>{};
+    _groupedActive = <domain.TaskPriority, List<domain.Task>>{};
     for (final priority in [
       domain.TaskPriority.urgent,
       domain.TaskPriority.high,
       domain.TaskPriority.medium,
       domain.TaskPriority.low,
     ]) {
-      final tasks = _activeTasks.where((t) => t.priority == priority).toList();
-      if (tasks.isNotEmpty) {
-        groups[priority] = tasks;
+      final priorityTasks = _activeTasks.where((t) => t.priority == priority).toList();
+      if (priorityTasks.isNotEmpty) {
+        _groupedActive[priority] = priorityTasks;
       }
     }
-    return groups;
-  }
 
-  int get _overdueCount => _activeTasks
-      .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
-      .length;
+    final now = DateTime.now();
+    _overdueCount = _activeTasks
+        .where((t) => t.dueDate != null && t.dueDate!.isBefore(now))
+        .length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +256,8 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
               onDelete: () => _deleteTask(entry.value[i].id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                // ⚡ Bolt: Use modulo for delay to prevent unbounded delays for large datasets
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: (i % 10) * 40))
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 
@@ -412,7 +419,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             priority: priority,
             dueDate: dueDate,
           );
-          Navigator.pop(ctx);
+          if (ctx.mounted) {
+            Navigator.pop(ctx);
+          }
           _loadTasks();
         },
       ),
