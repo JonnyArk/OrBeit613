@@ -1,0 +1,3 @@
+## 2024-05-24 - Replaced GestureDetector wrapping Icon with IconButton
+**Learning:** Raw `GestureDetector` widgets wrapping an `Icon` fail to communicate button semantics to screen readers and miss out on native visual touch feedback (ink ripple). This creates a degraded UX and accessibility gap.
+**Action:** Default to `IconButton` for clickable icons. If the default 48px padding breaks a tight layout, explicitly override `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to preserve visual dimensions while retaining proper accessibility labels via `tooltip` and interactive splash effects.
