@@ -1,0 +1,4 @@
+## 2025-03-06 - Unauthenticated AI Service Endpoints Enable User ID Spoofing
+**Vulnerability:** Public `onRequest` endpoints (`generateAsset`, `distillContext`) accepted user-provided `userId` within the payload without authenticating the requester, allowing any user to spoof their `userId` and attribute costs/actions to others.
+**Learning:** This occurred because `onRequest` was chosen over `onCall` (likely for standard REST contract reasons) but manual authentication verification (`admin.auth().verifyIdToken()`) was missing. Thus, the server trusted the client's `userId` instead of a securely decoded token.
+**Prevention:** Whenever standard HTTP endpoints (`onRequest`) are used for sensitive operations, ensure the request contains a valid bearer token in the `Authorization` header and explicitly verify it. For user-specific operations, always overwrite client-provided user IDs with the `uid` from the verified token.
