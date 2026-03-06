@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -60,6 +61,30 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+/**
+ * Helper to verify Firebase ID token from Authorization header.
+ *
+ * @param req - The incoming HTTP request
+ * @param res - The HTTP response object
+ * @returns The decoded token if valid, null otherwise
+ */
+async function verifyAuth(req, res) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+        return null;
+    }
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+        return decodedToken;
+    }
+    catch (error) {
+        logger.warn("Unauthorized: Token verification failed", { error });
+        res.status(401).json({ error: "Unauthorized: Invalid token" });
+        return null;
+    }
+}
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -97,7 +122,10 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const decodedToken = await verifyAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,8 +161,13 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const decodedToken = await verifyAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const body = request.body;
+        // Overwrite userId with authenticated uid to prevent spoofing
+        body.userId = decodedToken.uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +213,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const decodedToken = await verifyAuth(request, response);
+    if (!decodedToken)
+        return;
     try {
         const body = request.body;
+        // Overwrite userId with authenticated uid to prevent spoofing
+        body.userId = decodedToken.uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
