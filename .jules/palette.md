@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessible Icon Buttons
+**Learning:** Replaced bare `GestureDetector`s wrapping `Icon`s with semantic, accessible `IconButton` widgets. It ensures correct tooltips for screen readers and provides visual feedback like hover states and ripple effects. Tight packing can still be achieved utilizing `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()`.
+**Action:** When creating icon-only interactive elements in Flutter, prefer `IconButton` with a `tooltip` over wrapping an `Icon` in a `GestureDetector`. Use `padding` and `constraints` on the `IconButton` to customize its size constraints and hit area when tight packing is needed.
