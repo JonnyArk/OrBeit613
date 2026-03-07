@@ -10,10 +10,12 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { Response } from "express";
 
 // AI Services
 import {
@@ -26,6 +28,28 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * Validates the Authorization header and returns the authenticated user's ID.
+ *
+ * @param req - The Express request object
+ * @returns The authenticated user's UID or null if invalid
+ */
+async function verifyAuth(req: Request): Promise<string | null> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Invalid ID token", { error });
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,8 +100,14 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request: Request, response: Response) => {
     try {
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -110,15 +140,23 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response: Response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
 
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            // Prevent IDOR by injecting the authenticated UID
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -166,15 +204,23 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response: Response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
 
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            // Prevent IDOR by injecting the authenticated UID
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
