@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Authentication on onRequest Endpoints
+**Vulnerability:** The AI backend services (`generateAsset`, `distillContext`, `creditUsage`) exposed via `onRequest` lack automatic authentication verification. This allows unauthenticated users to trigger AI features and consume credits, or spoof the `body.userId` to consume another user's credits (IDOR).
+**Learning:** `onRequest` functions in Firebase v2 do not automatically populate `request.auth` like `onCall` functions do. Developers must manually verify the Bearer token using `admin.auth().verifyIdToken()`.
+**Prevention:** Always implement manual token verification for `onRequest` endpoints that perform sensitive actions or consume resources, and securely inject the authenticated `uid` derived from the token to prevent IDOR via client-provided payloads.
