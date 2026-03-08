@@ -10,10 +10,12 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { Response } from "express";
 
 // AI Services
 import {
@@ -67,16 +69,43 @@ export const healthCheck = onRequest(async (_request, response) => {
 });
 
 /**
+ * Verifies the Firebase Auth token from the request header.
+ *
+ * @param request - The incoming HTTP request
+ * @returns The decoded token UID if valid, null otherwise
+ */
+async function verifyAuth(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Failed to verify auth token", { error });
+        return null;
+    }
+}
+
+/**
  * Credit usage summary endpoint for monitoring AI resource consumption.
  *
- * @param _request - The incoming HTTP request
+ * @param request - The incoming HTTP request
  * @param response - The HTTP response object
  * @returns JSON response with credit usage statistics
  *
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request: Request, response: Response) => {
+    const userId = await verifyAuth(request);
+    if (!userId) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -110,15 +139,22 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response: Response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
 
+        const userId = await verifyAuth(request);
+        if (!userId) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -131,6 +167,7 @@ export const generateAsset = onRequest(
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                userId,
             });
 
             const whiskService = getWhiskService();
@@ -166,15 +203,22 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response: Response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
 
+        const userId = await verifyAuth(request);
+        if (!userId) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = userId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -188,6 +232,7 @@ export const distillContext = onRequest(
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                userId,
             });
 
             const flowService = getFlowService();
