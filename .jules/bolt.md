@@ -1,0 +1,3 @@
+## 2024-05-24 - Avoid O(N) filtering in State getters
+**Learning:** Performing O(N) list operations (like `.where()`, `.toList()`) inside getter methods of a Flutter `State` class can cause severe performance bottlenecks because getters evaluate on every `build()` call (up to 60fps).
+**Action:** Memoize these computations into state variables and update them only when the source data changes (e.g., in a dedicated processing method called during `setState()`).
