@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -88,16 +89,42 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
     });
 });
 /**
+ * Verifies the Firebase Auth token from the request header.
+ *
+ * @param request - The incoming HTTP request
+ * @returns The decoded token UID if valid, null otherwise
+ */
+async function verifyAuth(request) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decodedToken.uid;
+    }
+    catch (error) {
+        logger.warn("Failed to verify auth token", { error });
+        return null;
+    }
+}
+/**
  * Credit usage summary endpoint for monitoring AI resource consumption.
  *
- * @param _request - The incoming HTTP request
+ * @param request - The incoming HTTP request
  * @param response - The HTTP response object
  * @returns JSON response with credit usage statistics
  *
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const userId = await verifyAuth(request);
+    if (!userId) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,8 +160,14 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const userId = await verifyAuth(request);
+    if (!userId) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        body.userId = userId;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -145,6 +178,7 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
+            userId,
         });
         const whiskService = (0, ai_1.getWhiskService)();
         const result = await whiskService.generateAsset(body);
@@ -180,8 +214,14 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const userId = await verifyAuth(request);
+    if (!userId) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        body.userId = userId;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
@@ -193,6 +233,7 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             dataType: body.dataType,
             complexity: body.complexity || "standard",
             inputLength: body.rawData.length,
+            userId,
         });
         const flowService = (0, ai_1.getFlowService)();
         const result = await flowService.distillContext(body);
