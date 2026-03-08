@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility and Visual Feedback for Icon-Only Buttons
+**Learning:** In Flutter, wrapping an `Icon` with a `GestureDetector` deprives the element of critical accessibility features (like ARIA semantic labels) and standard visual feedback (like ripple effects) that users expect for interactive elements. This creates an inaccessible UI, especially for screen readers and keyboard users.
+**Action:** Always prefer `IconButton` (with a `tooltip` parameter for accessibility) over a raw `GestureDetector` when creating clickable icons. To maintain tight visual packing or avoid unwanted padding from the default minimum target size constraints, use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` directly on the `IconButton`.
