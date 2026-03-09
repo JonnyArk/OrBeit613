@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,26 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper function to verify Firebase Auth token from request header.
+ * @param request - The incoming HTTP request
+ * @returns The authenticated user's UID or null if unauthorized
+ */
+async function verifyAuth(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Token verification failed", { error });
+        return null;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -117,8 +138,17 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Verify authentication
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            // Overwrite userId with authenticated uid to prevent IDOR
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -131,6 +161,7 @@ export const generateAsset = onRequest(
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                userId: uid,
             });
 
             const whiskService = getWhiskService();
@@ -173,8 +204,17 @@ export const distillContext = onRequest(
             return;
         }
 
+        // Verify authentication
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            // Overwrite userId with authenticated uid to prevent IDOR
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -188,6 +228,7 @@ export const distillContext = onRequest(
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                userId: uid,
             });
 
             const flowService = getFlowService();
