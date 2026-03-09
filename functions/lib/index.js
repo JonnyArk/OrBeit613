@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -60,6 +61,26 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+/**
+ * Helper function to verify Firebase Auth token from request header.
+ * @param request - The incoming HTTP request
+ * @returns The authenticated user's UID or null if unauthorized
+ */
+async function verifyAuth(request) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decodedToken.uid;
+    }
+    catch (error) {
+        logger.warn("Token verification failed", { error });
+        return null;
+    }
+}
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -133,8 +154,16 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Verify authentication
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        // Overwrite userId with authenticated uid to prevent IDOR
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -145,6 +174,7 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
+            userId: uid,
         });
         const whiskService = (0, ai_1.getWhiskService)();
         const result = await whiskService.generateAsset(body);
@@ -180,8 +210,16 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Verify authentication
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        // Overwrite userId with authenticated uid to prevent IDOR
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
@@ -193,6 +231,7 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             dataType: body.dataType,
             complexity: body.complexity || "standard",
             inputLength: body.rawData.length,
+            userId: uid,
         });
         const flowService = (0, ai_1.getFlowService)();
         const result = await flowService.distillContext(body);
