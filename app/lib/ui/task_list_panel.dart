@@ -26,6 +26,12 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   bool _loading = true;
   bool _showCompleted = false;
 
+  // Memoized task groupings to prevent O(N) evaluations in build()
+  List<domain.Task> _activeTasks = [];
+  List<domain.Task> _completedTasks = [];
+  Map<domain.TaskPriority, List<domain.Task>> _groupedActive = {};
+  int _overdueCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +44,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     if (mounted) {
       setState(() {
         _tasks = tasks;
+        _processTasks();
         _loading = false;
       });
     }
@@ -45,31 +52,41 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
   // ── Grouping Logic ────────────────────────────────────────
 
-  List<domain.Task> get _activeTasks =>
-      _tasks.where((t) => t.status != domain.TaskStatus.completed).toList();
+  void _processTasks() {
+    _activeTasks = [];
+    _completedTasks = [];
+    _groupedActive = {};
+    _overdueCount = 0;
 
-  List<domain.Task> get _completedTasks =>
-      _tasks.where((t) => t.status == domain.TaskStatus.completed).toList();
+    // Maintain strict insertion order for UI presentation
+    final tempGroups = <domain.TaskPriority, List<domain.Task>>{};
 
-  Map<domain.TaskPriority, List<domain.Task>> get _groupedActive {
-    final groups = <domain.TaskPriority, List<domain.Task>>{};
+    final now = DateTime.now();
+
+    for (final task in _tasks) {
+      if (task.status == domain.TaskStatus.completed) {
+        _completedTasks.add(task);
+      } else {
+        _activeTasks.add(task);
+        tempGroups.putIfAbsent(task.priority, () => []).add(task);
+        if (task.dueDate != null && task.dueDate!.isBefore(now)) {
+          _overdueCount++;
+        }
+      }
+    }
+
+    // Transfer to _groupedActive in exact priority order
     for (final priority in [
       domain.TaskPriority.urgent,
       domain.TaskPriority.high,
       domain.TaskPriority.medium,
       domain.TaskPriority.low,
     ]) {
-      final tasks = _activeTasks.where((t) => t.priority == priority).toList();
-      if (tasks.isNotEmpty) {
-        groups[priority] = tasks;
+      if (tempGroups.containsKey(priority) && tempGroups[priority]!.isNotEmpty) {
+        _groupedActive[priority] = tempGroups[priority]!;
       }
     }
-    return groups;
   }
-
-  int get _overdueCount => _activeTasks
-      .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
-      .length;
 
   @override
   Widget build(BuildContext context) {
@@ -412,7 +429,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
             priority: priority,
             dueDate: dueDate,
           );
-          Navigator.pop(ctx);
+          if (mounted) {
+            Navigator.pop(ctx);
+          }
           _loadTasks();
         },
       ),

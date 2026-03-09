@@ -1,0 +1,3 @@
+## 2024-05-24 - Memoize O(N) list operations outside of Flutter's build loop
+**Learning:** In Flutter, evaluating O(N) properties (like filtering, grouping, or counting items in a list) inside a `State` class's getter method causes these computations to run on every `build()` call (up to 60fps). This leads to significant overhead and dropped frames, particularly when lists grow large or the UI renders complex animations.
+**Action:** Always memoize computationally expensive operations by storing the results in state variables. Update these variables explicitly during lifecycle events (e.g., inside `_loadTasks()` or other `setState` triggers) rather than relying on dynamic getters, thus preventing unnecessary O(N) evaluations during the render loop.
