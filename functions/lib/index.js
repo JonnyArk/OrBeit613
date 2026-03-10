@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -60,6 +61,23 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+/**
+ * Helper to verify authorization header for onRequest endpoints.
+ * Prevents IDOR and unauthorized access.
+ *
+ * @param request - HTTP request containing Authorization header
+ * @returns Authenticated user ID
+ * @throws Error if unauthenticated
+ */
+async function authenticate(request) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: Missing or invalid token");
+    }
+    const token = authHeader.split("Bearer ")[1];
+    const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+    return decodedToken.uid;
+}
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -97,8 +115,9 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
     try {
+        await authenticate(request);
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
         logger.info("Credit usage requested", summary);
@@ -110,9 +129,11 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
     }
     catch (error) {
         logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+        response.status(isAuthError ? 401 : 500).json({
             success: false,
-            error: "Failed to retrieve credit usage",
+            error: isAuthError ? "Unauthorized" : "Failed to retrieve credit usage",
         });
     }
 });
@@ -134,7 +155,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        const userId = await authenticate(request);
         const body = request.body;
+        // Securely inject authenticated user ID (prevents spoofing)
+        body.userId = userId;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -157,9 +181,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     catch (error) {
         logger.error("Asset generation failed", { error });
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
+        const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+        response.status(isAuthError ? 401 : 500).json({
             success: false,
-            error: errorMessage,
+            error: isAuthError ? "Unauthorized" : errorMessage,
         });
     }
 });
@@ -181,7 +206,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        const userId = await authenticate(request);
         const body = request.body;
+        // Securely inject authenticated user ID (prevents spoofing)
+        body.userId = userId;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
@@ -205,9 +233,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     catch (error) {
         logger.error("Context distillation failed", { error });
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
+        const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+        response.status(isAuthError ? 401 : 500).json({
             success: false,
-            error: errorMessage,
+            error: isAuthError ? "Unauthorized" : errorMessage,
         });
     }
 });

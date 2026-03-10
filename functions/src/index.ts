@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,24 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper to verify authorization header for onRequest endpoints.
+ * Prevents IDOR and unauthorized access.
+ *
+ * @param request - HTTP request containing Authorization header
+ * @returns Authenticated user ID
+ * @throws Error if unauthenticated
+ */
+async function authenticate(request: Request): Promise<string> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: Missing or invalid token");
+    }
+    const token = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(token);
+    return decodedToken.uid;
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,8 +95,10 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        await authenticate(request);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -90,9 +111,11 @@ export const creditUsage = onRequest(async (_request, response) => {
         });
     } catch (error) {
         logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+        response.status(isAuthError ? 401 : 500).json({
             success: false,
-            error: "Failed to retrieve credit usage",
+            error: isAuthError ? "Unauthorized" : "Failed to retrieve credit usage",
         });
     }
 });
@@ -118,7 +141,11 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const userId = await authenticate(request);
             const body = request.body as AssetGenerationRequest;
+
+            // Securely inject authenticated user ID (prevents spoofing)
+            body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -145,9 +172,10 @@ export const generateAsset = onRequest(
             logger.error("Asset generation failed", { error });
             const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
+            const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+            response.status(isAuthError ? 401 : 500).json({
                 success: false,
-                error: errorMessage,
+                error: isAuthError ? "Unauthorized" : errorMessage,
             });
         }
     }
@@ -174,7 +202,11 @@ export const distillContext = onRequest(
         }
 
         try {
+            const userId = await authenticate(request);
             const body = request.body as DistillationRequest;
+
+            // Securely inject authenticated user ID (prevents spoofing)
+            body.userId = userId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -202,9 +234,10 @@ export const distillContext = onRequest(
             logger.error("Context distillation failed", { error });
             const errorMessage =
                 error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
+            const isAuthError = errorMessage.startsWith("Unauthorized") || errorMessage.includes("auth/id-token-");
+            response.status(isAuthError ? 401 : 500).json({
                 success: false,
-                error: errorMessage,
+                error: isAuthError ? "Unauthorized" : errorMessage,
             });
         }
     }
