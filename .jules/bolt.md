@@ -1,0 +1,3 @@
+## 2026-03-10 - Memoizing O(N) operations in Flutter widgets
+**Learning:** In Flutter `StatefulWidget` or `ConsumerStatefulWidget` elements, placing O(N) list operations (filtering, mapping, grouping) inside getter methods that are called during `build` can cause severe performance issues. This is because `build` can be evaluated on every frame (up to 60fps), needlessly recomputing the entire collection multiple times per second.
+**Action:** Always refactor these derived lists/maps into memoized state variables. Compute them explicitly only when the source data changes (e.g., within the `setState` closure) to eliminate redundant processing during UI redraws.
