@@ -250,6 +250,9 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
       );
     }
 
+    // ⚡ Bolt: Removed index-based delay from lazy-loaded ListView item animation
+    // When virtualizing list views (SliverChildBuilderDelegate), delay must be bounded
+    // (or removed) to avoid arbitrary multi-second delays when scrolling down to index > 20.
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       itemCount: _events.length,
@@ -275,7 +278,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms)
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
