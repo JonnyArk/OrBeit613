@@ -236,32 +236,65 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     }
 
     final grouped = _groupedActive;
+    final slivers = <Widget>[];
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // Priority groups
+    for (final entry in grouped.entries) {
+      slivers.add(SliverToBoxAdapter(
+        child: _buildPriorityHeader(entry.key, entry.value.length),
+      ));
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
+      final groupTasks = entry.value;
+      slivers.add(
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final task = groupTasks[index];
+              return _SwipeableTaskTile(
+                task: task,
+                onComplete: () => _completeTask(task.id),
+                onDelete: () => _deleteTask(task.id),
+              )
+                  .animate()
+                  .fadeIn(duration: 300.ms)
+                  .slideX(begin: 0.05, end: 0, duration: 300.ms);
+            },
+            childCount: groupTasks.length,
+          ),
+        ),
+      );
+    }
+
+    // Completed section (collapsible)
+    if (_completedTasks.isNotEmpty) {
+      slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 8)));
+      slivers.add(SliverToBoxAdapter(child: _buildCompletedHeader()));
+
+      if (_showCompleted) {
+        final completed = _completedTasks;
+        slivers.add(
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                return _CompletedTaskTile(task: completed[index]);
+              },
+              childCount: completed.length,
+            ),
+          ),
+        );
+      }
+    }
+
+    // ⚡ Bolt: Replaced eager ListView with CustomScrollView & SliverList
+    // This provides O(1) rendering performance by virtualizing the list, ensuring
+    // tasks are only built when they scroll into view rather than pre-instantiating
+    // potentially hundreds of widgets in memory eagerly.
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          sliver: SliverMainAxisGroup(slivers: slivers),
+        ),
       ],
     );
   }
