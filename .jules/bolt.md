@@ -1,0 +1,3 @@
+## 2024-03-12 - Prevent animation delays in virtualized lists
+**Learning:** Using index-based delays (e.g., `delay: Duration(milliseconds: index * 50)`) inside a lazily-loaded virtualized list (like `ListView.builder`) causes a severe perceived performance bug. When a user scrolls down, items that are lazily instantiated with higher indices wait arbitrarily long (e.g., index 50 waits 2.5 seconds) before animating in, making the UI appear unresponsive or broken.
+**Action:** When animating items inside virtualized or lazily-loaded lists, rely only on animation duration or static delays, never bind the delay to the item's global index. Items scrolled into view should animate immediately.
