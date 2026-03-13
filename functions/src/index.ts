@@ -11,8 +11,9 @@
 
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+import { getAuth } from "firebase-admin/auth";
 import * as logger from "firebase-functions/logger";
 
 // AI Services
@@ -26,6 +27,29 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+
+
+/** Helper to authenticate requests */
+async function authenticateRequest(
+    request: Request,
+    response: { status: (code: number) => { json: (data: Record<string, unknown>) => void } }
+): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const idToken = authHeader.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,8 +100,10 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        if (!(await authenticateRequest(request, response))) return;
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +144,11 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await authenticateRequest(request, response);
+            if (!uid) return;
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Prevent IDOR spoofing
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +204,11 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await authenticateRequest(request, response);
+            if (!uid) return;
+
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Prevent IDOR spoofing
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
