@@ -1,0 +1,4 @@
+## 2025-02-17 - Prevent IDOR by Injecting Authenticated uid in onRequest Endpoints
+**Vulnerability:** AI Service endpoints (`generateAsset`, `distillContext`) relied on client-provided `userId` payloads. An attacker could spoof the `userId` in the HTTP body, allowing them to access, consume credits, or insert Life Events on behalf of other users (IDOR).
+**Learning:** `onRequest` HTTP endpoints do not automatically verify user authentication or populate `request.auth` like `onCall` endpoints do. Any sensitive business logic requiring a user ID within `onRequest` is vulnerable unless explicitly verified.
+**Prevention:** Always extract the Bearer token from the `Authorization` header, verify it using `getAuth().verifyIdToken()`, and use the decoded `uid` to securely overwrite any client-provided `userId` before passing data to underlying services.
