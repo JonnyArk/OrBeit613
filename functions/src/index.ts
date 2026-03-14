@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -76,7 +77,36 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+/**
+ * Helper to verify authorization token from request headers.
+ *
+ * @param request - The incoming HTTP request
+ * @returns The authenticated user's UID or null if invalid
+ */
+async function verifyAuth(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Auth token verification failed", { error });
+        return null;
+    }
+}
+
+export const creditUsage = onRequest(async (request, response) => {
+    // Security: Require authentication for sensitive usage data
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -120,6 +150,16 @@ export const generateAsset = onRequest(
         try {
             const body = request.body as AssetGenerationRequest;
 
+            // Security: Require authentication and prevent IDOR
+            const uid = await verifyAuth(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            // Securely inject authenticated user ID, overriding any spoofed ID
+            body.userId = uid;
+
             // Validate required fields
             if (!body.assetType || !body.context) {
                 response.status(400).json({
@@ -129,6 +169,7 @@ export const generateAsset = onRequest(
             }
 
             logger.info("Asset generation request received", {
+                userId: uid,
                 assetType: body.assetType,
                 size: body.size || "medium",
             });
@@ -176,6 +217,16 @@ export const distillContext = onRequest(
         try {
             const body = request.body as DistillationRequest;
 
+            // Security: Require authentication and prevent IDOR
+            const uid = await verifyAuth(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            // Securely inject authenticated user ID, overriding any spoofed ID
+            body.userId = uid;
+
             // Validate required fields
             if (!body.rawData || !body.dataType) {
                 response.status(400).json({
@@ -185,6 +236,7 @@ export const distillContext = onRequest(
             }
 
             logger.info("Context distillation request received", {
+                userId: uid,
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
