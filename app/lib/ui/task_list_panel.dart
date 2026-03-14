@@ -237,31 +237,56 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // Flatten data for true virtualization
+    final items = <Object>[];
+    for (final entry in grouped.entries) {
+      items.add(MapEntry<domain.TaskPriority, int>(entry.key, entry.value.length));
+      items.addAll(entry.value);
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
+    if (_completedTasks.isNotEmpty) {
+      items.add("completed_spacer");
+      items.add("completed_header");
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(MapEntry<String, domain.Task>("completed", task));
+        }
+      }
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final item = items[index];
+
+                if (item is MapEntry<domain.TaskPriority, int>) {
+                  return _buildPriorityHeader(item.key, item.value);
+                } else if (item is domain.Task) {
+                  return _SwipeableTaskTile(
+                    task: item,
+                    onComplete: () => _completeTask(item.id),
+                    onDelete: () => _deleteTask(item.id),
+                  )
+                      .animate()
+                      .fadeIn(duration: 300.ms)
+                      .slideX(begin: 0.05, end: 0, duration: 300.ms);
+                } else if (item is String && item == "completed_spacer") {
+                  return const SizedBox(height: 8);
+                } else if (item is String && item == "completed_header") {
+                  return _buildCompletedHeader();
+                } else if (item is MapEntry<String, domain.Task>) {
+                  return _CompletedTaskTile(task: item.value);
+                }
+                return const SizedBox.shrink();
+              },
+              childCount: items.length,
+            ),
+          ),
+        ),
       ],
     );
   }
