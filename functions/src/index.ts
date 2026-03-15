@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -26,6 +27,26 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+type ResponseObject = { status: (code: number) => { json: (data: Record<string, unknown>) => void } };
+
+/** Helper to verify auth token for onRequest endpoints */
+async function verifyAuth(request: import("firebase-functions/v2/https").Request, response: ResponseObject): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return null;
+    }
+    try {
+        const decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decoded.uid;
+    } catch (error) {
+        logger.warn("Auth failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return null;
+    }
+}
+
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,7 +97,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const uid = await verifyAuth(request, response as unknown as ResponseObject);
+    if (!uid) return;
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -111,6 +134,8 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const uid = await verifyAuth(request, response as unknown as ResponseObject);
+        if (!uid) return;
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -119,6 +144,7 @@ export const generateAsset = onRequest(
 
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Securely inject userId
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -167,6 +193,8 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const uid = await verifyAuth(request, response as unknown as ResponseObject);
+        if (!uid) return;
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -175,6 +203,7 @@ export const distillContext = onRequest(
 
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Securely inject userId
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
