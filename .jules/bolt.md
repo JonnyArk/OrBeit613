@@ -1,0 +1,3 @@
+## 2024-05-24 - Animation Delays in Virtualized Lists
+**Learning:** Using index-based delays in `flutter_animate` (e.g., `delay: Duration(milliseconds: index * 50)`) inside a lazily-loaded list like `ListView.builder` or `SliverList` creates a performance/UX anti-pattern. Items that are scrolled into view later (e.g., index 50) receive a massive initial delay (2.5 seconds), causing them to remain invisible and blank space to be shown while the user waits for the arbitrary animation timer to finish.
+**Action:** Remove index-based or modulo-based animation delays for items inside virtualized, lazily-loaded lists. Items scrolled into view should animate immediately using only `duration` to avoid arbitrary UI waits.
