@@ -1,0 +1,3 @@
+## 2024-03-16 - Replace GestureDetector with IconButton for Icon Accessibility
+**Learning:** Using `GestureDetector` to wrap `Icon` widgets is a common pattern in this app for custom tight layouts, but it lacks keyboard focus, touch ripples, and semantic labels. `IconButton` provides these out-of-the-box but its default padding can break tight visual layouts.
+**Action:** Replace `GestureDetector` > `Icon` with `IconButton` and add `tooltip` for semantic labels. Use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` on the `IconButton` to preserve the exact same tight visual layouts as the `GestureDetector` while still providing full accessibility and interaction feedback.
