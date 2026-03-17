@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility and semantics for custom icon buttons
+**Learning:** Found a recurring pattern in the Flutter app where `GestureDetector` wrapped around `Icon` is used instead of semantic `IconButton`s. This removes visual feedback (ripples), keyboard accessibility, and crucial screen reader labels (`Semantics`/`tooltip`).
+**Action:** Replace `GestureDetector`+`Icon` combinations with `IconButton`. For tight spaces, apply `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to the `IconButton` to prevent the default 48x48 hit area inflation from breaking the layout.
