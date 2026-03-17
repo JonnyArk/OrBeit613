@@ -13,6 +13,28 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../domain/entities/task.dart' as domain;
 import '../providers/task_provider.dart';
 
+enum _TaskListItemType {
+  priorityHeader,
+  activeTask,
+  spacer,
+  completedHeader,
+  completedTask,
+}
+
+class _TaskListItem {
+  final _TaskListItemType type;
+  final domain.TaskPriority? priority;
+  final int? priorityCount;
+  final domain.Task? task;
+
+  _TaskListItem({
+    required this.type,
+    this.priority,
+    this.priorityCount,
+    this.task,
+  });
+}
+
 /// Task list panel widget
 class TaskListPanel extends ConsumerStatefulWidget {
   const TaskListPanel({super.key});
@@ -236,33 +258,61 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     }
 
     final grouped = _groupedActive;
+    final items = <_TaskListItem>[];
 
-    return ListView(
+    for (final entry in grouped.entries) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.priorityHeader,
+        priority: entry.key,
+        priorityCount: entry.value.length,
+      ));
+      for (final task in entry.value) {
+        items.add(_TaskListItem(
+          type: _TaskListItemType.activeTask,
+          task: task,
+        ));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      items.add(_TaskListItem(type: _TaskListItemType.spacer));
+      items.add(_TaskListItem(type: _TaskListItemType.completedHeader));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_TaskListItem(
+            type: _TaskListItemType.completedTask,
+            task: task,
+          ));
+        }
+      }
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+
+        switch (item.type) {
+          case _TaskListItemType.priorityHeader:
+            return _buildPriorityHeader(item.priority!, item.priorityCount!);
+          case _TaskListItemType.activeTask:
+            return _SwipeableTaskTile(
+              task: item.task!,
+              onComplete: () => _completeTask(item.task!.id),
+              onDelete: () => _deleteTask(item.task!.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+                .fadeIn(duration: 300.ms)
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case _TaskListItemType.spacer:
+            return const SizedBox(height: 8);
+          case _TaskListItemType.completedHeader:
+            return _buildCompletedHeader();
+          case _TaskListItemType.completedTask:
+            return _CompletedTaskTile(task: item.task!);
+        }
+      },
     );
   }
 
