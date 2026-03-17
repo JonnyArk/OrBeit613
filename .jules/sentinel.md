@@ -1,0 +1,4 @@
+## 2024-03-17 - Prevent IDOR in Backend AI Services
+**Vulnerability:** The HTTP onRequest endpoints (`generateAsset`, `distillContext`) accepted user ID either from request body or ignored authorization entirely, making them susceptible to spoofing where a user could potentially use another user's identity/credits.
+**Learning:** These HTTP services rely on custom payload and were migrated from or implemented directly as `onRequest` rather than `onCall`. As standard HTTP endpoints, `request.auth` is not automatically populated, and validation of the user context needs manual authorization header verification via `getAuth().verifyIdToken()`.
+**Prevention:** For `onRequest` endpoints acting as authenticated APIs, manually verify the `Authorization` header and securely inject the derived user `uid` into business logic parameters to prevent spoofing.
