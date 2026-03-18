@@ -237,32 +237,71 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
+    final items = <_TaskListItem>[];
+
+    for (final entry in grouped.entries) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.header,
+        priority: entry.key,
+        count: entry.value.length,
+      ));
+
+      for (final task in entry.value) {
+        items.add(_TaskListItem(
+          type: _TaskListItemType.task,
+          task: task,
+        ));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.completedHeader,
+        count: _completedTasks.length,
+      ));
+
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_TaskListItem(
+            type: _TaskListItemType.completedTask,
+            task: task,
+          ));
+        }
+      }
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+
+        switch (item.type) {
+          case _TaskListItemType.header:
+            return _buildPriorityHeader(item.priority!, item.count!);
+
+          case _TaskListItemType.task:
+            return _SwipeableTaskTile(
+              task: item.task!,
+              onComplete: () => _completeTask(item.task!.id),
+              onDelete: () => _deleteTask(item.task!.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+                .fadeIn(duration: 300.ms)
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+          case _TaskListItemType.completedHeader:
+            return Column(
+              children: [
+                const SizedBox(height: 8),
+                _buildCompletedHeader(),
+              ],
+            );
+
+          case _TaskListItemType.completedTask:
+            return _CompletedTaskTile(task: item.task!);
+        }
+      },
     );
   }
 
@@ -446,6 +485,26 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
         return 'Low';
     }
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// LIST TYPES
+// ════════════════════════════════════════════════════════════
+
+enum _TaskListItemType { header, task, completedHeader, completedTask }
+
+class _TaskListItem {
+  final _TaskListItemType type;
+  final domain.TaskPriority? priority;
+  final int? count;
+  final domain.Task? task;
+
+  _TaskListItem({
+    required this.type,
+    this.priority,
+    this.count,
+    this.task,
+  });
 }
 
 // ════════════════════════════════════════════════════════════
