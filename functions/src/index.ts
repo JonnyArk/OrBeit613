@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -35,6 +36,26 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper to verify authorization header for HTTP endpoints.
+ * @param request - The HTTP request
+ * @returns The verified user ID, or null if unauthorized
+ */
+async function verifyAuth(request: { headers: { authorization?: string } }): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        return null;
+    }
+    try {
+        const idToken = authHeader.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Auth verification failed", { error });
+        return null;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -118,6 +139,13 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // Security: Verify authentication and prevent IDOR
+            const uid = await verifyAuth(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -127,6 +155,9 @@ export const generateAsset = onRequest(
                 });
                 return;
             }
+
+            // Securely inject the verified user ID, overwriting any client-provided value
+            body.userId = uid;
 
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
@@ -174,6 +205,13 @@ export const distillContext = onRequest(
         }
 
         try {
+            // Security: Verify authentication and prevent IDOR
+            const uid = await verifyAuth(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -183,6 +221,9 @@ export const distillContext = onRequest(
                 });
                 return;
             }
+
+            // Securely inject the verified user ID, overwriting any client-provided value
+            body.userId = uid;
 
             logger.info("Context distillation request received", {
                 dataType: body.dataType,
