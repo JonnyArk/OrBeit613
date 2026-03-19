@@ -235,35 +235,68 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       );
     }
 
-    final grouped = _groupedActive;
+    final listItems = _buildListItems();
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
+    // ⚡ Bolt: Replaced eager ListView with CustomScrollView + SliverChildBuilderDelegate
+    // to virtualize rendering. This prevents O(N) memory bloat and layout lag as the
+    // task list grows, only instantiating widgets as they scroll into view.
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final item = listItems[index];
+                switch (item.type) {
+                  case _ListItemType.priorityHeader:
+                    return _buildPriorityHeader(item.priority!, item.count!);
+                  case _ListItemType.activeTask:
+                    return _SwipeableTaskTile(
+                      task: item.task!,
+                      onComplete: () => _completeTask(item.task!.id),
+                      onDelete: () => _deleteTask(item.task!.id),
+                    ).animate()
+                      .fadeIn(duration: 300.ms)
+                      .slideX(begin: 0.05, end: 0, duration: 300.ms);
+                  case _ListItemType.completedHeader:
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: _buildCompletedHeader(),
+                    );
+                  case _ListItemType.completedTask:
+                    return _CompletedTaskTile(task: item.task!);
+                }
+              },
+              childCount: listItems.length,
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  List<_ListItem> _buildListItems() {
+    final items = <_ListItem>[];
+    final grouped = _groupedActive;
+
+    for (final entry in grouped.entries) {
+      items.add(_ListItem.priorityHeader(entry.key, entry.value.length));
+      for (final task in entry.value) {
+        items.add(_ListItem.activeTask(task));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      items.add(const _ListItem.completedHeader());
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_ListItem.completedTask(task));
+        }
+      }
+    }
+
+    return items;
   }
 
   // ── Priority Section Header ───────────────────────────────
@@ -446,6 +479,44 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
         return 'Low';
     }
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// LIST ITEMS
+// ════════════════════════════════════════════════════════════
+
+enum _ListItemType {
+  priorityHeader,
+  activeTask,
+  completedHeader,
+  completedTask,
+}
+
+class _ListItem {
+  final _ListItemType type;
+  final domain.TaskPriority? priority;
+  final int? count;
+  final domain.Task? task;
+
+  const _ListItem.priorityHeader(this.priority, this.count)
+      : type = _ListItemType.priorityHeader,
+        task = null;
+
+  const _ListItem.activeTask(this.task)
+      : type = _ListItemType.activeTask,
+        priority = null,
+        count = null;
+
+  const _ListItem.completedHeader()
+      : type = _ListItemType.completedHeader,
+        priority = null,
+        count = null,
+        task = null;
+
+  const _ListItem.completedTask(this.task)
+      : type = _ListItemType.completedTask,
+        priority = null,
+        count = null;
 }
 
 // ════════════════════════════════════════════════════════════
