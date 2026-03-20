@@ -1,0 +1,3 @@
+## 2024-05-24 - Flatten grouped items before virtualizing long lists
+**Learning:** Eagerly rendering grouped lists (like `ListView(children: [...])`) using nested for-loops inside the builder causes O(N) widget instantiation at load time. Directly porting these loops into a lazy builder is complex.
+**Action:** When virtualizing heterogeneous or grouped lists (using `CustomScrollView` and `SliverChildBuilderDelegate`), flatten the complex hierarchical data structure into a single linear array of wrapper objects (e.g. `_TaskListItemType` enum) in a state getter beforehand. This enables an O(1) index-based builder.

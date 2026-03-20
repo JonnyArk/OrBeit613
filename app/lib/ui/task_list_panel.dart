@@ -21,6 +21,27 @@ class TaskListPanel extends ConsumerStatefulWidget {
   ConsumerState<TaskListPanel> createState() => _TaskListPanelState();
 }
 
+enum _TaskListItemType {
+  priorityHeader,
+  activeTask,
+  completedHeader,
+  completedTask,
+}
+
+class _TaskListItem {
+  final _TaskListItemType type;
+  final domain.TaskPriority? priority;
+  final int? count;
+  final domain.Task? task;
+
+  _TaskListItem({
+    required this.type,
+    this.priority,
+    this.count,
+    this.task,
+  });
+}
+
 class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   List<domain.Task> _tasks = [];
   bool _loading = true;
@@ -70,6 +91,46 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   int get _overdueCount => _activeTasks
       .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
       .length;
+
+  List<_TaskListItem> get _flattenedItems {
+    final items = <_TaskListItem>[];
+
+    // Active tasks grouped by priority
+    for (final entry in _groupedActive.entries) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.priorityHeader,
+        priority: entry.key,
+        count: entry.value.length,
+      ));
+
+      for (final task in entry.value) {
+        items.add(_TaskListItem(
+          type: _TaskListItemType.activeTask,
+          task: task,
+        ));
+      }
+    }
+
+    // Completed tasks
+    if (_completedTasks.isNotEmpty) {
+      // Add padding before completed header conceptually handled in builder, but we add an empty item or just handle it in builder?
+      // We will handle spacer in the builder or directly output header.
+      items.add(_TaskListItem(
+        type: _TaskListItemType.completedHeader,
+      ));
+
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_TaskListItem(
+            type: _TaskListItemType.completedTask,
+            task: task,
+          ));
+        }
+      }
+    }
+
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,33 +296,44 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       );
     }
 
-    final grouped = _groupedActive;
+    final items = _flattenedItems;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final item = items[index];
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
+                switch (item.type) {
+                  case _TaskListItemType.priorityHeader:
+                    return _buildPriorityHeader(item.priority!, item.count!);
+                  case _TaskListItemType.activeTask:
+                    return _SwipeableTaskTile(
+                      task: item.task!,
+                      onComplete: () => _completeTask(item.task!.id),
+                      onDelete: () => _deleteTask(item.task!.id),
+                    )
+                        .animate()
+                        .fadeIn(duration: 300.ms)
+                        .slideX(begin: 0.05, end: 0, duration: 300.ms);
+                  case _TaskListItemType.completedHeader:
+                    return Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        _buildCompletedHeader(),
+                      ],
+                    );
+                  case _TaskListItemType.completedTask:
+                    return _CompletedTaskTile(task: item.task!);
+                }
+              },
+              childCount: items.length,
+            ),
+          ),
+        ),
       ],
     );
   }
