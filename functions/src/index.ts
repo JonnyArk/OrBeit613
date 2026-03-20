@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,28 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper to extract and verify the Firebase ID token from the Authorization header.
+ *
+ * @param request - The incoming HTTP request
+ * @returns The authenticated user's UID, or null if unauthorized
+ */
+async function getAuthenticatedUid(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Unauthorized access attempt", { error });
+        return null;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,7 +99,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const uid = await getAuthenticatedUid(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -118,7 +147,15 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await getAuthenticatedUid(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            // Prevent IDOR by forcing the payload userId to match the authenticated token
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +211,15 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await getAuthenticatedUid(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            // Prevent IDOR by forcing the payload userId to match the authenticated token
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
