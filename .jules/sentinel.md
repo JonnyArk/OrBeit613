@@ -1,0 +1,5 @@
+## 2024-03-21 - Unauthenticated AI Service Endpoints Enable Resource Abuse & IDOR
+
+**Vulnerability:** Core AI functionality exposed via HTTP endpoints (`generateAsset`, `distillContext`, `creditUsage`) were using `onRequest` without implementing manual authentication verification. This allowed unauthenticated requests to consume monthly AI credits. Furthermore, operations taking a `userId` in the payload were susceptible to Insecure Direct Object Reference (IDOR), as any user could supply an arbitrary ID.
+**Learning:** In Firebase Cloud Functions, `onRequest` (public HTTP) endpoints do not automatically verify tokens or populate the `request.auth` object unlike `onCall` (Callable) endpoints. Authentication headers must be manually extracted and verified using `firebase-admin/auth` (`getAuth().verifyIdToken()`).
+**Prevention:** Always implement manual authorization header parsing (`getAuth().verifyIdToken()`) for protected `onRequest` endpoints. Crucially, inject the decoded `uid` directly into request payloads to override any client-provided IDs, ensuring the action is bound only to the authenticated user.
