@@ -1,0 +1,3 @@
+## 2024-05-15 - Optimize ListView for Heterogeneous Lists
+**Learning:** Instantiating heterogeneous lists (e.g., grouped tasks with section headers and items) using an eager `ListView` can cause performance and memory issues, particularly for long lists, as it eagerly pre-instantiates all widget objects in memory.
+**Action:** When virtualizing heterogeneous Flutter lists, flatten the grouped data structure into a single array of wrapped objects with an explicit type enum (e.g., `_TaskListItemType`) to allow the `ListView.builder` (or `SliverChildBuilderDelegate`) to dynamically render the correct widget per index, enabling true virtualization. Avoid computing derived state only within central asynchronous reload methods to prevent state desynchronization.
