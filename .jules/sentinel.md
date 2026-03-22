@@ -1,0 +1,4 @@
+## 2026-02-05 - Missing Authentication and IDOR in AI Services
+**Vulnerability:** The AI backend services (`generateAsset`, `distillContext`, `creditUsage`) exposed via HTTP `onRequest` endpoints lacked authentication and trusted the client-provided `userId` for billing and caching scope.
+**Learning:** This occurred because `onRequest` endpoints do not have `request.auth` automatically populated like `onCall` endpoints. To avoid breaking the client API contract, manual authorization header verification was required instead of converting them to `onCall`.
+**Prevention:** For custom HTTP endpoints that provide business logic or access sensitive data, manually extract the token from `req.headers.authorization` and verify it using `getAuth().verifyIdToken()`. Always override client-supplied identities (like `body.userId`) with the verified `uid` derived from the token to prevent IDOR and spoofing.
