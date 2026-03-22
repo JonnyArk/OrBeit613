@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -50,19 +51,12 @@ setGlobalOptions({
 export const healthCheck = onRequest(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
 
-    const aiManager = getAIManager();
-    const usageSummary = await aiManager.getUsageSummary();
-
     response.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development",
-        credits: {
-            remaining: usageSummary.remaining,
-            percentageUsed: usageSummary.percentageUsed.toFixed(1) + "%",
-        },
     });
 });
 
@@ -76,8 +70,23 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        // Sentinel: Verify Authentication to prevent unauthorized access to usage data
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch {
+            response.status(401).json({ error: "Invalid token" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -117,8 +126,27 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Sentinel: Verify Authentication to prevent unauthorized access
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        let uid: string;
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(token);
+            uid = decodedToken.uid;
+        } catch {
+            response.status(401).json({ error: "Invalid token" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            // Sentinel: Prevent IDOR by forcibly injecting verified identity
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +201,27 @@ export const distillContext = onRequest(
             return;
         }
 
+        // Sentinel: Verify Authentication to prevent unauthorized access
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        let uid: string;
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(token);
+            uid = decodedToken.uid;
+        } catch {
+            response.status(401).json({ error: "Invalid token" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            // Sentinel: Prevent IDOR by forcibly injecting verified identity
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {

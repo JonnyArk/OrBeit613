@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -73,18 +74,12 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
  */
 exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
-    const aiManager = (0, ai_1.getAIManager)();
-    const usageSummary = await aiManager.getUsageSummary();
     response.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development",
-        credits: {
-            remaining: usageSummary.remaining,
-            percentageUsed: usageSummary.percentageUsed.toFixed(1) + "%",
-        },
     });
 });
 /**
@@ -97,8 +92,22 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
     try {
+        // Sentinel: Verify Authentication to prevent unauthorized access to usage data
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            await (0, auth_1.getAuth)().verifyIdToken(token);
+        }
+        catch {
+            response.status(401).json({ error: "Invalid token" });
+            return;
+        }
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
         logger.info("Credit usage requested", summary);
@@ -133,8 +142,26 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Sentinel: Verify Authentication to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    let uid;
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        uid = decodedToken.uid;
+    }
+    catch {
+        response.status(401).json({ error: "Invalid token" });
+        return;
+    }
     try {
         const body = request.body;
+        // Sentinel: Prevent IDOR by forcibly injecting verified identity
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +207,26 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Sentinel: Verify Authentication to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    let uid;
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        uid = decodedToken.uid;
+    }
+    catch {
+        response.status(401).json({ error: "Invalid token" });
+        return;
+    }
     try {
         const body = request.body;
+        // Sentinel: Prevent IDOR by forcibly injecting verified identity
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
