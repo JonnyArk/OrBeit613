@@ -1,0 +1,3 @@
+## 2024-03-23 - IconButton vs GestureDetector for Accessibility
+**Learning:** In Flutter, wrapping an `Icon` with a `GestureDetector` creates an interactive element without proper semantic labels (like ARIA) or visual feedback (ripple effect) for screen readers and keyboard users.
+**Action:** Always prefer `IconButton` with a `tooltip` over `GestureDetector` + `Icon` for actionable icons. For tight layouts where `IconButton`'s default padding is too large, use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to maintain the exact visual footprint while gaining built-in accessibility and material feedback.
