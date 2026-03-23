@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -61,6 +62,29 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     region: "us-central1",
 });
 /**
+ * Helper to authenticate HTTP requests using Firebase Auth.
+ * Returns the verified user UID, or null if unauthorized.
+ * Responds with a 401 status if unauthorized.
+ */
+async function getAuthenticatedUid(request, response) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        logger.warn("Unauthorized request missing or invalid Bearer token");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decodedToken.uid;
+    }
+    catch {
+        logger.warn("Unauthorized request with invalid token");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
+/**
  * Health check endpoint for monitoring service availability.
  *
  * @param _request - The incoming HTTP request
@@ -73,18 +97,12 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
  */
 exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
-    const aiManager = (0, ai_1.getAIManager)();
-    const usageSummary = await aiManager.getUsageSummary();
     response.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development",
-        credits: {
-            remaining: usageSummary.remaining,
-            percentageUsed: usageSummary.percentageUsed.toFixed(1) + "%",
-        },
     });
 });
 /**
@@ -97,8 +115,11 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
     try {
+        const uid = await getAuthenticatedUid(request, response);
+        if (!uid)
+            return;
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
         logger.info("Credit usage requested", summary);
@@ -134,7 +155,12 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        const uid = await getAuthenticatedUid(request, response);
+        if (!uid)
+            return;
         const body = request.body;
+        // Overwrite userId with securely verified uid to prevent IDOR/spoofing
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -181,7 +207,12 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        const uid = await getAuthenticatedUid(request, response);
+        if (!uid)
+            return;
         const body = request.body;
+        // Overwrite userId with securely verified uid to prevent IDOR/spoofing
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({

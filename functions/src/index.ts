@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -37,6 +38,33 @@ setGlobalOptions({
 });
 
 /**
+ * Helper to authenticate HTTP requests using Firebase Auth.
+ * Returns the verified user UID, or null if unauthorized.
+ * Responds with a 401 status if unauthorized.
+ */
+async function getAuthenticatedUid(
+    request: Request,
+    response: { status: (code: number) => { json: (data: Record<string, unknown>) => void } }
+): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        logger.warn("Unauthorized request missing or invalid Bearer token");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch {
+        logger.warn("Unauthorized request with invalid token");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
+
+/**
  * Health check endpoint for monitoring service availability.
  *
  * @param _request - The incoming HTTP request
@@ -50,19 +78,12 @@ setGlobalOptions({
 export const healthCheck = onRequest(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
 
-    const aiManager = getAIManager();
-    const usageSummary = await aiManager.getUsageSummary();
-
     response.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development",
-        credits: {
-            remaining: usageSummary.remaining,
-            percentageUsed: usageSummary.percentageUsed.toFixed(1) + "%",
-        },
     });
 });
 
@@ -76,8 +97,11 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const uid = await getAuthenticatedUid(request, response as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+        if (!uid) return;
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +142,12 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await getAuthenticatedUid(request, response as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+            if (!uid) return;
+
             const body = request.body as AssetGenerationRequest;
+            // Overwrite userId with securely verified uid to prevent IDOR/spoofing
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +203,12 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await getAuthenticatedUid(request, response as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+            if (!uid) return;
+
             const body = request.body as DistillationRequest;
+            // Overwrite userId with securely verified uid to prevent IDOR/spoofing
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
