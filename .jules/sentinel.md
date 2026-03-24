@@ -1,0 +1,4 @@
+## 2024-05-24 - Unauthenticated Access to Paid AI Endpoints
+**Vulnerability:** Publicly accessible `onRequest` HTTP endpoints (`generateAsset`, `distillContext`, `creditUsage`) allowed unauthenticated usage of paid Google AI Ultra resources, opening the door to Denial of Wallet attacks and potential IDOR if user-supplied `userId` fields were trusted.
+**Learning:** Firebase `onRequest` endpoints do not automatically verify authentication or populate `request.auth` like `onCall` functions do. Any HTTP endpoint exposing sensitive data or consuming credits must manually verify the Authorization bearer token.
+**Prevention:** Always enforce manual Bearer token validation using `getAuth().verifyIdToken()` for `onRequest` endpoints. Prevent IDOR by injecting the securely verified token's `uid` directly into the request payload instead of trusting the client's `userId`.
