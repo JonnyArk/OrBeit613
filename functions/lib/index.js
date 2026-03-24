@@ -45,10 +45,36 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+/**
+ * Helper to verify authorization token from HTTP request header.
+ * Avoids any type issues by using structural typing for response.
+ * @param request HTTP Request object
+ * @param response HTTP Response object (structurally typed)
+ * @returns {Promise<string | null>} The verified user UID or null if unauthorized
+ */
+async function verifyAuth(request, response) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        logger.warn("Missing or invalid Authorization header");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decodedToken.uid;
+    }
+    catch {
+        logger.warn("Invalid ID token provided");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -97,7 +123,11 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // Security enhancement: Require authorization for credit usage
+    const uid = await verifyAuth(request, response);
+    if (!uid)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -134,6 +164,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        // Security: Verify authentication and get user ID
+        const uid = await verifyAuth(request, response);
+        if (!uid)
+            return;
         const body = request.body;
         // Validate required fields
         if (!body.assetType || !body.context) {
@@ -142,9 +176,12 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
             });
             return;
         }
+        // Security: Prevent IDOR by injecting verified UID
+        body.userId = uid;
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
+            userId: uid,
         });
         const whiskService = (0, ai_1.getWhiskService)();
         const result = await whiskService.generateAsset(body);
@@ -181,6 +218,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        // Security: Verify authentication and get user ID
+        const uid = await verifyAuth(request, response);
+        if (!uid)
+            return;
         const body = request.body;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
@@ -189,10 +230,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             });
             return;
         }
+        // Security: Prevent IDOR by injecting verified UID
+        body.userId = uid;
         logger.info("Context distillation request received", {
             dataType: body.dataType,
             complexity: body.complexity || "standard",
             inputLength: body.rawData.length,
+            userId: uid,
         });
         const flowService = (0, ai_1.getFlowService)();
         const result = await flowService.distillContext(body);

@@ -10,10 +10,40 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+/**
+ * Helper to verify authorization token from HTTP request header.
+ * Avoids any type issues by using structural typing for response.
+ * @param request HTTP Request object
+ * @param response HTTP Response object (structurally typed)
+ * @returns {Promise<string | null>} The verified user UID or null if unauthorized
+ */
+async function verifyAuth(
+    request: Request,
+    response: { status: (code: number) => { json: (data: Record<string, unknown>) => void } }
+): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        logger.warn("Missing or invalid Authorization header");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch {
+        logger.warn("Invalid ID token provided");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 
 // AI Services
 import {
@@ -76,7 +106,11 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // Security enhancement: Require authorization for credit usage
+    const uid = await verifyAuth(request, response as unknown as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -118,6 +152,10 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // Security: Verify authentication and get user ID
+            const uid = await verifyAuth(request, response as unknown as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+            if (!uid) return;
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -128,9 +166,13 @@ export const generateAsset = onRequest(
                 return;
             }
 
+            // Security: Prevent IDOR by injecting verified UID
+            body.userId = uid;
+
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                userId: uid,
             });
 
             const whiskService = getWhiskService();
@@ -174,6 +216,10 @@ export const distillContext = onRequest(
         }
 
         try {
+            // Security: Verify authentication and get user ID
+            const uid = await verifyAuth(request, response as unknown as { status: (code: number) => { json: (data: Record<string, unknown>) => void } });
+            if (!uid) return;
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -184,10 +230,14 @@ export const distillContext = onRequest(
                 return;
             }
 
+            // Security: Prevent IDOR by injecting verified UID
+            body.userId = uid;
+
             logger.info("Context distillation request received", {
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                userId: uid,
             });
 
             const flowService = getFlowService();
