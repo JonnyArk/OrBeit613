@@ -1,0 +1,3 @@
+## 2024-05-24 - Virtualizing Grouped Lists with ListView.builder
+**Learning:** When rendering a potentially long, grouped list in Flutter (e.g., tasks grouped by priority and status), using a standard `ListView` with a `children` list eagerly instantiates all widgets, leading to significant memory and CPU overhead as the number of items grows.
+**Action:** Flatten the grouped data structure into a single linear array of custom wrapper objects with an explicit type enum (e.g., `_TaskListItemType`). This allows using `ListView.builder` to enable virtualization, dynamically rendering only the visible headers, items, and spacers on demand.
