@@ -1,0 +1,4 @@
+## 2025-03-25 - Prevent IDOR on Firebase onRequest endpoints using verifyIdToken
+**Vulnerability:** Business logic in standard HTTP endpoints (`onRequest`) like `generateAsset` and `distillContext` were missing authentication, allowing unauthenticated access and potential Insecure Direct Object Reference (IDOR) vulnerabilities if `body.userId` was maliciously manipulated.
+**Learning:** Standard HTTP endpoints do not automatically verify user identities or expose a `request.auth` property like `onCall` endpoints. Thus, a secure manual extraction and verification process via `getAuth().verifyIdToken()` is required to enforce authentication.
+**Prevention:** Always implement a `verifyAuth` helper for `onRequest` endpoints. Crucially, strictly override client-provided identifiers (e.g., `body.userId = uid`) with the authenticated token uid to definitively prevent IDOR vulnerabilities without changing the endpoint signature.
