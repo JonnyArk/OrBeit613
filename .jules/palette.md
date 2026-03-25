@@ -1,0 +1,3 @@
+## 2024-03-25 - Icon Button Tooltips and Semantics
+**Learning:** `GestureDetector` wrapped around an `Icon` in Flutter only handles raw touch events and provides no semantic meaning (ARIA equivalent) to screen readers, nor does it provide standard visual feedback (like hover states or ripples).
+**Action:** When building interactive icon elements, prioritize using `IconButton` with a `tooltip` property to ensure proper accessibility labels and visual feedback. If space is constrained, use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` on the `IconButton` to maintain a tightly packed layout without sacrificing accessibility.
