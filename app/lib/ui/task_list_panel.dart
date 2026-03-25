@@ -13,6 +13,27 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../domain/entities/task.dart' as domain;
 import '../providers/task_provider.dart';
 
+enum _TaskListItemType {
+  priorityHeader,
+  activeTask,
+  completedHeader,
+  completedTask,
+}
+
+class _TaskListItem {
+  final _TaskListItemType type;
+  final domain.TaskPriority? priority;
+  final int? count;
+  final domain.Task? task;
+
+  _TaskListItem({
+    required this.type,
+    this.priority,
+    this.count,
+    this.task,
+  });
+}
+
 /// Task list panel widget
 class TaskListPanel extends ConsumerStatefulWidget {
   const TaskListPanel({super.key});
@@ -70,6 +91,44 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
   int get _overdueCount => _activeTasks
       .where((t) => t.dueDate != null && t.dueDate!.isBefore(DateTime.now()))
       .length;
+
+  List<_TaskListItem> get _flatItems {
+    final items = <_TaskListItem>[];
+    final grouped = _groupedActive;
+
+    // Active tasks grouped by priority
+    for (final entry in grouped.entries) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.priorityHeader,
+        priority: entry.key,
+        count: entry.value.length,
+      ));
+      for (final task in entry.value) {
+        items.add(_TaskListItem(
+          type: _TaskListItemType.activeTask,
+          task: task,
+        ));
+      }
+    }
+
+    // Completed section
+    if (_completedTasks.isNotEmpty) {
+      items.add(_TaskListItem(
+        type: _TaskListItemType.completedHeader,
+        count: _completedTasks.length,
+      ));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_TaskListItem(
+            type: _TaskListItemType.completedTask,
+            task: task,
+          ));
+        }
+      }
+    }
+
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,34 +294,40 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       );
     }
 
-    final grouped = _groupedActive;
+    final flatItems = _flatItems;
 
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: flatItems.length,
+      itemBuilder: (context, index) {
+        final item = flatItems[index];
+
+        switch (item.type) {
+          case _TaskListItemType.priorityHeader:
+            return _buildPriorityHeader(item.priority!, item.count!);
+
+          case _TaskListItemType.activeTask:
+            return _SwipeableTaskTile(
+              task: item.task!,
+              onComplete: () => _completeTask(item.task!.id),
+              onDelete: () => _deleteTask(item.task!.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+                .fadeIn(duration: 300.ms) // Removed index-based delay
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+          case _TaskListItemType.completedHeader:
+            return Column(
+              children: [
+                const SizedBox(height: 8),
+                _buildCompletedHeader(),
+              ],
+            );
+
+          case _TaskListItemType.completedTask:
+            return _CompletedTaskTile(task: item.task!);
+        }
+      },
     );
   }
 
