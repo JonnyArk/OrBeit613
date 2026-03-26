@@ -83,9 +83,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFF1A1A2E), width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFF1A1A2E), width: 1)),
       ),
       child: Row(
         children: [
@@ -259,23 +257,23 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
         final isLast = index == _events.length - 1;
 
         // Check if we need a date separator
-        final showDateHeader = isFirst ||
-            !_isSameDay(
-              _events[index - 1].occurredAt,
-              event.occurredAt,
-            );
+        final showDateHeader =
+            isFirst ||
+            !_isSameDay(_events[index - 1].occurredAt, event.occurredAt);
 
         return Column(
           children: [
             if (showDateHeader) _buildDateHeader(event.occurredAt),
             _TimelineEventCard(
-              event: event,
-              isFirst: isFirst,
-              isLast: isLast,
-              onDelete: () => _deleteEvent(event.id),
-            )
+                  event: event,
+                  isFirst: isFirst,
+                  isLast: isLast,
+                  onDelete: () => _deleteEvent(event.id),
+                )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                // ⚡ Bolt: Removed index-based delay (delay: index * 50ms)
+                // Items scrolled into view should animate immediately to prevent arbitrary UI waits
+                .fadeIn(duration: 400.ms)
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
@@ -287,7 +285,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final eventDay = DateTime(date.year, date.month, date.day);
-    
+
     String label;
     if (eventDay == today) {
       label = 'Today';
@@ -306,9 +304,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
           decoration: BoxDecoration(
             color: const Color(0xFFD4AF37).withAlpha(15),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: const Color(0xFFD4AF37).withAlpha(40),
-            ),
+            border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
           ),
           child: Text(
             label,
@@ -334,9 +330,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Color(0xFF1A1A2E), width: 1),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFF1A1A2E), width: 1)),
       ),
       child: ElevatedButton.icon(
         onPressed: _showAddEventDialog,
@@ -391,8 +385,18 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
 
   String _formatFullDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -629,7 +633,9 @@ class _TimelineEventCard extends StatelessWidget {
   }
 
   String _formatTime(DateTime date) {
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final period = date.hour >= 12 ? 'PM' : 'AM';
     final minute = date.minute.toString().padLeft(2, '0');
     return '$hour:$minute $period';
@@ -647,7 +653,8 @@ class _AddLifeEventSheet extends StatefulWidget {
     String? description,
     String? location,
     DateTime occurredAt,
-  ) onSave;
+  )
+  onSave;
 
   const _AddLifeEventSheet({required this.onSave});
 
@@ -678,13 +685,13 @@ class _AddLifeEventSheetState extends State<_AddLifeEventSheet> {
       decoration: const BoxDecoration(
         color: Color(0xFF0A0A12),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: Color(0xFFD4AF37), width: 2),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFD4AF37), width: 2)),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          24, 20, 24,
+          24,
+          20,
+          24,
           MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: SingleChildScrollView(
@@ -873,8 +880,9 @@ class _AddLifeEventSheetState extends State<_AddLifeEventSheet> {
                       color: isSelected
                           ? _colorForType(type)
                           : Colors.white.withAlpha(60),
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -1060,10 +1068,22 @@ class _AddLifeEventSheetState extends State<_AddLifeEventSheet> {
 
   String _formatDateFull(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final period = date.hour >= 12 ? 'PM' : 'AM';
     final minute = date.minute.toString().padLeft(2, '0');
     return '${months[date.month - 1]} ${date.day}, ${date.year} · $hour:$minute $period';
@@ -1138,7 +1158,9 @@ class _FilterChip extends StatelessWidget {
           color: isSelected ? color.withAlpha(25) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color.withAlpha(100) : Colors.white.withAlpha(20),
+            color: isSelected
+                ? color.withAlpha(100)
+                : Colors.white.withAlpha(20),
           ),
         ),
         child: Row(
