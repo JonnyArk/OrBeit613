@@ -1,0 +1,4 @@
+## 2025-05-20 - [CRITICAL] Fix IDOR/spoofing vulnerability in AI endpoints
+**Vulnerability:** IDOR vulnerability in AI Cloud Functions exposed via standard HTTP `onRequest` endpoints. The system relied on client-supplied payloads (`request.body.userId`) for identifying user resource utilization (like generating assets and distilled context).
+**Learning:** `onRequest` functions do not populate Firebase `request.auth` context like `onCall` functions do. In these standard HTTP endpoints, we explicitly verified the ID token from `authorization` headers but then still used the unverified `request.body.userId` payload instead of overriding it with the authenticated `uid`. This could allow spoofing user IDs and draining credits.
+**Prevention:** For custom `onRequest` endpoints, always overwrite client-supplied IDs (e.g. `body.userId`) with the authenticated token's `uid` explicitly after using `getAuth().verifyIdToken()`.
