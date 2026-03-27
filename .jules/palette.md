@@ -1,0 +1,3 @@
+## 2024-XX-XX - Task List Completion Button Accessibility
+**Learning:** Custom interactive elements (like `GestureDetector` wrapping icons) lack semantic labels and visual focus states by default, which creates accessibility gaps for screen readers.
+**Action:** Always prefer `IconButton` with a `tooltip` parameter for clickable icons to ensure proper ARIA/Semantics support and built-in interactive feedback. Adjust `padding` and `constraints` on the `IconButton` if tight packing is required.
