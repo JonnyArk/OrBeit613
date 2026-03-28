@@ -1,0 +1,4 @@
+## 2026-02-05 - Fix unauthenticated AI endpoints and IDOR
+**Vulnerability:** The AI HTTP endpoints (`generateAsset`, `distillContext`, `creditUsage`) exposed via `onRequest` lack authentication checks and read `userId` directly from the client request body. This allows for unauthorized AI credit consumption and spoofing (IDOR).
+**Learning:** `onRequest` endpoints do not automatically verify user authentication unlike `onCall`. Relying on client-provided IDs in the payload is a severe IDOR risk for AI resource consumption.
+**Prevention:** Secure standard HTTP endpoints by manually verifying the Authorization header using `getAuth().verifyIdToken()`, and securely inject the authenticated `uid` into business logic instead of trusting the client payload.

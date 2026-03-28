@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,26 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Helper to authenticate HTTP requests.
+ * @param req - The HTTP request
+ * @returns The authenticated user's ID or null
+ */
+async function authenticate(req: Request): Promise<string | null> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decoded = await getAuth().verifyIdToken(token);
+        return decoded.uid;
+    } catch {
+        return null;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,7 +97,14 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // SECURITY: Authenticate request
+    const uid = await authenticate(request as Request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -111,6 +139,13 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        // SECURITY: Authenticate request
+        const uid = await authenticate(request as Request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -119,6 +154,9 @@ export const generateAsset = onRequest(
 
         try {
             const body = request.body as AssetGenerationRequest;
+
+            // SECURITY: Prevent IDOR by injecting verified user ID
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -167,6 +205,13 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        // SECURITY: Authenticate request
+        const uid = await authenticate(request as Request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -175,6 +220,9 @@ export const distillContext = onRequest(
 
         try {
             const body = request.body as DistillationRequest;
+
+            // SECURITY: Prevent IDOR by injecting verified user ID
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
