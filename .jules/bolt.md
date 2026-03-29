@@ -1,0 +1,3 @@
+## 2024-05-15 - Virtualize Heterogeneous Flutter Lists
+**Learning:** Using an eager `ListView` with spread operators and inline loops for grouped data pre-instantiates all widget objects in memory. Applying `flutter_animate` with index-based delays within these eager lists causes UI delays when scrolling items into view.
+**Action:** Replace eager `ListView` with `ListView.builder`. Flatten nested or grouped data structures (like priority groups or mixed section headers and items) into a single array of wrapped objects (`_TaskListItem` with an explicit `_TaskListItemType` enum). Let the builder dynamically render the correct widget per index, enabling true lazy loading and virtualization. Remove index-based animation delays for lazily-loaded items.
