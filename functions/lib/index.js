@@ -49,6 +49,23 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+const auth_1 = require("firebase-admin/auth");
+/**
+ * Helper to verify authorization token and return uid.
+ */
+async function verifyAuth(request) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        return null;
+    }
+    try {
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(authHeader.substring(7));
+        return decodedToken.uid;
+    }
+    catch {
+        return null;
+    }
+}
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -97,8 +114,13 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
     try {
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
         logger.info("Credit usage requested", summary);
@@ -134,7 +156,13 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const body = request.body;
+        body.userId = uid; // Securely overwrite userId
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -181,7 +209,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const body = request.body;
+        body.userId = uid; // Securely overwrite userId
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
