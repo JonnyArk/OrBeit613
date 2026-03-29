@@ -612,9 +612,12 @@ class _SwipeableTaskTile extends StatelessWidget {
             ),
           ),
           // Tap to complete
-          GestureDetector(
-            onTap: onComplete,
-            child: Container(
+          IconButton(
+            onPressed: onComplete,
+            tooltip: 'Mark task as complete',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Container(
               padding: const EdgeInsets.all(6),
               child: Icon(
                 Icons.radio_button_unchecked,
