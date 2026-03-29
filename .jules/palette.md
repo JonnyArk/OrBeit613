@@ -1,0 +1,3 @@
+## 2024-05-24 - Semantic Labels for Icon-only Interactive Elements
+**Learning:** Found multiple instances of `GestureDetector` wrapping an `Icon` without a `Semantics` widget or `Tooltip` in Flutter lists/cards. This is a common accessibility antipattern that leaves screen readers unable to announce the button's purpose, preventing visually impaired users from understanding what the interactive element does.
+**Action:** Replace `GestureDetector` wrapped `Icon`s with `IconButton` and provide a clear `tooltip` property to natively support both semantics (ARIA-equivalent for screen readers) and visual tooltips on hover/long-press. For tight layouts, set `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` on the `IconButton`.
