@@ -1,0 +1,4 @@
+## 2026-02-05 - Missing Authentication and IDOR on AI Services
+**Vulnerability:** The AI endpoints (`generateAsset`, `distillContext`, `creditUsage`) were exposed publicly without checking authentication tokens. Additionally, the `userId` field was blindly trusted from client request payloads, leading to potential IDOR (Insecure Direct Object Reference) and spoofing.
+**Learning:** The AI services were built as standard `onRequest` HTTP endpoints but lacked custom authorization middleware. Because they were standard HTTP instead of `onCall` functions, they required manual token verification.
+**Prevention:** All `onRequest` functions that mutate or read user-specific data must manually verify standard authorization headers via `getAuth().verifyIdToken()`, and any user identification in the payload must be overwritten securely by the token's authenticated `uid`.
