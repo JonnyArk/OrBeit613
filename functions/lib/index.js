@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -55,6 +56,18 @@ const ai_1 = require("./ai");
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
+async function verifyAuth(request) {
+    try {
+        const authHeader = request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer "))
+            return null;
+        const decoded = await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decoded.uid;
+    }
+    catch {
+        return null;
+    }
+}
 // Global options for cost control and security
 (0, v2_1.setGlobalOptions)({
     maxInstances: 10,
@@ -97,7 +110,12 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,8 +151,14 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        body.userId = uid; // Prevent IDOR/spoofing
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +204,14 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const body = request.body;
+        body.userId = uid; // Prevent IDOR/spoofing
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
