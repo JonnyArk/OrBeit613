@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -29,6 +30,17 @@ initializeApp();
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
+
+async function verifyAuth(request: Request): Promise<string | null> {
+    try {
+        const authHeader = request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) return null;
+        const decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decoded.uid;
+    } catch {
+        return null;
+    }
+}
 
 // Global options for cost control and security
 setGlobalOptions({
@@ -76,7 +88,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const uid = await verifyAuth(request);
+    if (!uid) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,8 +135,15 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Prevent IDOR/spoofing
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +198,15 @@ export const distillContext = onRequest(
             return;
         }
 
+        const uid = await verifyAuth(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Prevent IDOR/spoofing
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {

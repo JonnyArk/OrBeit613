@@ -1,0 +1,4 @@
+## 2024-03-30 - [Fix Unauthorized AI Service Access & IDOR/Spoofing]
+**Vulnerability:** Backend AI services (`generateAsset`, `distillContext`, `creditUsage`) exposed via `onRequest` endpoints lacked manual authorization header verification and trusted the client-provided `userId` payload, allowing unauthenticated access and IDOR/spoofing.
+**Learning:** Exposing standard HTTP endpoints (`onRequest`) requires manual authentication since they bypass the automatic context injection present in `onCall` functions. Relying on client-provided IDs directly without verifying them against the token leads to severe spoofing vulnerabilities.
+**Prevention:** Always manually decode and verify authorization headers for HTTP endpoints via `getAuth().verifyIdToken()`. Ensure the `userId` in client payloads is systematically overwritten by the authenticated `uid` derived from the verified token.
