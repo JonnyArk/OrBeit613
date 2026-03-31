@@ -1,0 +1,3 @@
+## 2024-05-24 - Flutter Accessibility: Icon-Only Buttons
+**Learning:** Using `GestureDetector` wrapping an `Icon` for clickable elements in Flutter strips away built-in accessibility semantics (like ARIA labels/tooltips) and keyboard focus states. This is a recurring pattern that severely degrades the experience for screen reader users and keyboard navigators.
+**Action:** Always prefer `IconButton` over `GestureDetector` + `Icon`. For tight UI packing where the default padding of `IconButton` is undesirable, apply `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to the `IconButton` to maintain the visual footprint while preserving accessibility.
