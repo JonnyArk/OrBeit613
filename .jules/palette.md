@@ -1,0 +1,3 @@
+## 2024-04-01 - Replace GestureDetector on Icon with IconButton
+**Learning:** Wrapping an `Icon` with a `GestureDetector` in Flutter creates an inaccessible icon-only button without a semantic label, keyboard focus support, or visual touch feedback. This is a common pattern that fails accessibility guidelines.
+**Action:** Always prefer `IconButton` (with a `tooltip` for ARIA/Semantics) over `GestureDetector` wrapping an `Icon` to ensure proper accessibility labels and visual feedback. For tight packing, use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` on the `IconButton`.
