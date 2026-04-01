@@ -1,0 +1,3 @@
+## 2024-05-18 - Virtualize Eager Lists
+**Learning:** In Flutter, using an eager `ListView` with a large number of grouped items (`children: [...]`) pre-instantiates all widget objects immediately in memory, causing O(N) allocation and severe rendering overhead.
+**Action:** Always replace eager `ListView` with `ListView.builder` by flattening grouped data structures into a single array with an explicit type enum (e.g. `_TaskListItemType`) to allow the builder to dynamically and lazily render heterogeneous rows. Additionally, remove index-based `delay` from `flutter_animate` inside virtualized lists so that items scrolled into view animate immediately without arbitrary UI delays.
