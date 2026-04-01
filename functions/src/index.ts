@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,22 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Extracts and verifies the Firebase ID token from the authorization header.
+ * @param req - The HTTP request containing the Authorization header
+ * @returns The verified user ID
+ * @throws Error if authorization fails
+ */
+async function requireAuth(req: Request): Promise<string> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Missing or invalid authorization header");
+    }
+    const token = authHeader.split("Bearer ")[1];
+    const decodedToken = await getAuth().verifyIdToken(token);
+    return decodedToken.uid;
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,8 +93,15 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        try {
+            await requireAuth(request);
+        } catch {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,6 +142,14 @@ export const generateAsset = onRequest(
         }
 
         try {
+            let uid: string;
+            try {
+                uid = await requireAuth(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -128,9 +160,13 @@ export const generateAsset = onRequest(
                 return;
             }
 
+            // Secure user ID injection
+            body.userId = uid;
+
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                userId: uid,
             });
 
             const whiskService = getWhiskService();
@@ -174,6 +210,14 @@ export const distillContext = onRequest(
         }
 
         try {
+            let uid: string;
+            try {
+                uid = await requireAuth(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -184,10 +228,14 @@ export const distillContext = onRequest(
                 return;
             }
 
+            // Secure user ID injection
+            body.userId = uid;
+
             logger.info("Context distillation request received", {
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                userId: uid,
             });
 
             const flowService = getFlowService();

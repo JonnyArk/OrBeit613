@@ -1,0 +1,4 @@
+## 2024-05-24 - AI Endpoints Auth Bypass Vulnerability
+**Vulnerability:** Missing authentication and IDOR vulnerability in `onRequest` AI service endpoints.
+**Learning:** While HTTP endpoints (`onRequest`) don't automatically enforce Firebase Authentication like `onCall` functions do, the business logic (`WhiskService` and `FlowService`) accepts a client-provided `userId` directly from the request body. This allows an attacker to bypass authentication entirely or impersonate any user by forging the `userId` in the payload, potentially consuming their AI credits or viewing/generating data under their account.
+**Prevention:** For `onRequest` HTTP endpoints, explicitly verify the authorization header using `getAuth().verifyIdToken()`. Crucially, overwrite any client-provided user IDs (e.g., `body.userId`) with the verified `uid` extracted from the auth token to ensure actions are strictly bound to the authenticated user.
