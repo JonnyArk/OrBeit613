@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,25 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Verifies the authorization header and returns the authenticated user ID.
+ * @param request The incoming HTTP request.
+ * @returns The authenticated user's ID.
+ * @throws Error if authorization is missing or invalid.
+ */
+async function verifyAuth(request: Request): Promise<string> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Unauthorized");
+    }
+    try {
+        const decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decodedToken.uid;
+    } catch {
+        throw new Error("Unauthorized");
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,8 +96,16 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        // Sentinel: Ensure endpoint is authenticated
+        try {
+            await verifyAuth(request);
+        } catch {
+            response.status(401).json({ success: false, error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +146,17 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // Sentinel: Require authentication and prevent IDOR by securely injecting the authenticated user ID
+            let uid: string;
+            try {
+                uid = await verifyAuth(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Securely overwrite any client-provided ID
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +212,17 @@ export const distillContext = onRequest(
         }
 
         try {
+            // Sentinel: Require authentication and prevent IDOR by securely injecting the authenticated user ID
+            let uid: string;
+            try {
+                uid = await verifyAuth(request);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Securely overwrite any client-provided ID
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
