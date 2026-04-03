@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessible Icon Buttons in Flutter
+**Learning:** Found a recurring pattern in the UI where `GestureDetector` is used to wrap `Icon`s for interactions. This strips out native visual feedback (ink splashes), keyboard navigation, and semantic labels necessary for screen readers.
+**Action:** Replaced `GestureDetector` wrapping an `Icon` with `IconButton` providing a `tooltip` for ARIA/Semantics. For tight UI layouts where `IconButton`'s default padding alters alignment, apply `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to maintain visual design while adding accessibility.
