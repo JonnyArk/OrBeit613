@@ -1,0 +1,3 @@
+## 2024-05-24 - List Virtualization and Animation Delays
+**Learning:** Using eager `ListView` with many items and complex nested `.map` or `for` loops causes significant memory overhead and lag, especially when mixing different item types (headers, tasks). Additionally, using index-based delays (e.g., `delay: Duration(milliseconds: index * 50)`) inside a lazily loaded list (like `ListView.builder`) causes visual bugs where newly scrolled-into-view items wait arbitrarily long to appear.
+**Action:** Always flatten heterogeneous grouped data into a 1D array of typed objects and use `ListView.builder`. Inside lazily-loaded lists, remove index-based or modulo-based animation delays so items animate immediately upon entering the viewport.
