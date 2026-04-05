@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -60,6 +61,26 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+/**
+ * Verify the Authorization token in the request.
+ * Returns the uid if successful, or null.
+ */
+async function verifyAuth(request, response) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decoded = await (0, auth_1.getAuth)().verifyIdToken(token);
+        return decoded.uid;
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -97,7 +118,10 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const uid = await verifyAuth(request, response);
+    if (!uid)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -134,7 +158,11 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        const uid = await verifyAuth(request, response);
+        if (!uid)
+            return;
         const body = request.body;
+        body.userId = uid; // Overwrite to prevent IDOR
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -181,7 +209,11 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        const uid = await verifyAuth(request, response);
+        if (!uid)
+            return;
         const body = request.body;
+        body.userId = uid; // Overwrite to prevent IDOR
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
