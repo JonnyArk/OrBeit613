@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,7 +119,24 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Security: Verify auth token to prevent unauthorized access
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            let uid: string;
+            try {
+                const token = authHeader.split("Bearer ")[1];
+                uid = (await getAuth().verifyIdToken(token)).uid;
+            } catch {
+                response.status(401).json({ error: "Invalid token" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Security: Overwrite userId to prevent IDOR spoofing
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +192,24 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Security: Verify auth token to prevent unauthorized access
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            let uid: string;
+            try {
+                const token = authHeader.split("Bearer ")[1];
+                uid = (await getAuth().verifyIdToken(token)).uid;
+            } catch {
+                response.status(401).json({ error: "Invalid token" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Security: Overwrite userId to prevent IDOR spoofing
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
