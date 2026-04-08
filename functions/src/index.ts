@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -29,6 +30,24 @@ initializeApp();
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
+
+type ResponseObject = { status: (code: number) => { json: (data: Record<string, unknown>) => void } };
+
+async function verifyAuth(request: Request, response: ResponseObject): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 
 // Global options for cost control and security
 setGlobalOptions({
@@ -118,7 +137,11 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await verifyAuth(request, response as unknown as ResponseObject);
+            if (!uid) return;
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +197,11 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await verifyAuth(request, response as unknown as ResponseObject);
+            if (!uid) return;
+
             const body = request.body as DistillationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
