@@ -13,6 +13,17 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../domain/entities/task.dart' as domain;
 import '../providers/task_provider.dart';
 
+enum _ListItemType { priorityHeader, task, spacing, completedHeader, completedTask }
+
+class _ListItem {
+  final _ListItemType type;
+  final domain.TaskPriority? priority;
+  final int? count;
+  final domain.Task? task;
+
+  _ListItem({required this.type, this.priority, this.count, this.task});
+}
+
 /// Task list panel widget
 class TaskListPanel extends ConsumerStatefulWidget {
   const TaskListPanel({super.key});
@@ -237,32 +248,52 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // Flatten tasks into a single array for true virtualization
+    final items = <_ListItem>[];
+    for (final entry in grouped.entries) {
+      items.add(_ListItem(
+        type: _ListItemType.priorityHeader,
+        priority: entry.key,
+        count: entry.value.length,
+      ));
+      for (final task in entry.value) {
+        items.add(_ListItem(type: _ListItemType.task, task: task));
+      }
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    if (_completedTasks.isNotEmpty) {
+      items.add(_ListItem(type: _ListItemType.spacing));
+      items.add(_ListItem(type: _ListItemType.completedHeader));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_ListItem(type: _ListItemType.completedTask, task: task));
+        }
+      }
+    }
+
+    // ⚡ Bolt: Replaced eager ListView with ListView.builder for O(1) memory virtualization
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        switch (item.type) {
+          case _ListItemType.priorityHeader:
+            return _buildPriorityHeader(item.priority!, item.count!);
+          case _ListItemType.task:
+            return _SwipeableTaskTile(
+              task: item.task!,
+              onComplete: () => _completeTask(item.task!.id),
+              onDelete: () => _deleteTask(item.task!.id),
+            ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case _ListItemType.spacing:
+            return const SizedBox(height: 8);
+          case _ListItemType.completedHeader:
+            return _buildCompletedHeader();
+          case _ListItemType.completedTask:
+            return _CompletedTaskTile(task: item.task!);
+        }
+      },
     );
   }
 
