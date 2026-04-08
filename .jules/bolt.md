@@ -1,0 +1,3 @@
+## 2026-04-08 - Virtualizing Heterogeneous Lists in Flutter
+**Learning:** Virtualizing grouped or heterogeneous lists (e.g., headers + items) in Flutter using `ListView.builder` requires flattening the structured data (like Maps) into a single array of wrapped objects with an explicit type enum. Eager `ListView` with nested loops leads to O(N) widget instantiation in memory.
+**Action:** When refactoring eager lists with complex grouping to use lazy builders, create a specific wrapper class (e.g., `_ListItem` with an enum `_ListItemType`) to allow the O(1) builder to dynamically switch and render the correct widget per index. Note: Remove staggered animation delays when moving to virtualized lists to avoid arbitrary wait times for items scrolled into view.
