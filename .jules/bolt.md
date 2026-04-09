@@ -1,0 +1,3 @@
+## 2024-04-09 - Virtualizing Task List Panel in Flutter
+**Learning:** Returning eagerly-built Widget objects from a `ListView` mapping can cause performance degradation for long lists, particularly when combined with animations on every item load. When grouping lists in Flutter, mapping entries directly into the `children` list forces the entire collection into memory up front.
+**Action:** Replace `ListView(children: ...)` with `ListView.builder` for unbounded or long lists. Flatten the grouped structure (e.g., headers + tasks) into a single 1D array of a sealed class/enum, and map each type dynamically in the `itemBuilder` using `ListView.builder` so elements are instantiated and rendered lazily on scroll.
