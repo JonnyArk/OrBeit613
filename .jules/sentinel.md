@@ -1,0 +1,4 @@
+## 2025-04-11 - [CRITICAL] Prevent IDOR on onRequest API endpoints
+**Vulnerability:** AI backend endpoints (`creditUsage`, `generateAsset`, `distillContext`) deployed via `onRequest` lacked authentication verification, enabling potential resource abuse and Identity Object Reference (IDOR) spoofing by passing an arbitrary `userId` payload.
+**Learning:** `onRequest` functions bypass Firebase Auth's standard client-side gating found in `onCall`. Relying purely on client payload (`request.body.userId`) for business logic is insecure.
+**Prevention:** Explicitly verify the authorization bearer token via `getAuth().verifyIdToken(token)` for all `onRequest` functions and overwrite any client-provided user identification fields with the strictly verified token `uid` prior to passing parameters to business logic functions.
