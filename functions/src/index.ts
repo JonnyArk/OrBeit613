@@ -14,6 +14,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { requireAuth, type TypedResponse } from "./auth";
 
 // AI Services
 import {
@@ -76,7 +77,10 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const uid = await requireAuth(request, response as unknown as TypedResponse);
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,8 +121,12 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Prevent IDOR
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +181,12 @@ export const distillContext = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Prevent IDOR
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
