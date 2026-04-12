@@ -15,6 +15,8 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
+import { requireAuth, type TypedResponse } from "./auth";
+
 // AI Services
 import {
     getAIManager,
@@ -117,8 +119,13 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Require Authentication
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Securely overwrite userId from client
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +180,13 @@ export const distillContext = onRequest(
             return;
         }
 
+        // Require Authentication
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Securely overwrite userId from client
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
