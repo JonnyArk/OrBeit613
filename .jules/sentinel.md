@@ -1,0 +1,4 @@
+## 2025-04-16 - Prevent Unauthenticated AI Resource Usage
+**Vulnerability:** Missing authentication on AI endpoints (`generateAsset` and `distillContext`) allows unauthenticated users to consume AI credits. An attacker can hit the endpoints and drain all 25,000 monthly credits.
+**Learning:** Firebase `onRequest` endpoints do not enforce authentication by default unlike `onCall`. Even though the app has Firebase configured, `onRequest` functions need manual authentication checks. Furthermore, trusting `body.userId` when not manually verifying the token could lead to IDOR or impersonation.
+**Prevention:** Always use a helper like `requireAuth` to explicitly verify `authorization` headers for `onRequest` endpoints, and securely inject the authenticated `uid` into the payload rather than trusting `body.userId`.
