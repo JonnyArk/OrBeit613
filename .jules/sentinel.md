@@ -1,0 +1,4 @@
+## 2024-04-17 - Missing Endpoint Authentication (IDOR/Spoofing)
+**Vulnerability:** Firebase Functions `onRequest` HTTP endpoints (`generateAsset`, `distillContext`) lacked authentication, accepting client-provided `userId` inside request bodies.
+**Learning:** Unlike Firebase Callable functions (`onCall`) where `context.auth` is automatically populated, standard Express-like HTTP functions (`onRequest`) offer zero built-in authentication context. Any unauthenticated user could consume credits, and malicious actors could spoof the `userId` in the payload to cost credits/store assets under other identities.
+**Prevention:** Always use `requireAuth` helper with `getAuth().verifyIdToken()` in `onRequest` endpoints. Never trust client-provided user IDs; instead securely override `body.userId = uid` with the cryptographically verified `uid` derived from the bearer token.

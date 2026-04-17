@@ -24,6 +24,9 @@ import {
     type DistillationRequest,
 } from "./ai";
 
+// Authentication
+import { requireAuth, type TypedResponse } from "./auth";
+
 // Initialize Firebase Admin
 initializeApp();
 
@@ -117,8 +120,17 @@ export const generateAsset = onRequest(
             return;
         }
 
+        let uid: string;
+        try {
+            uid = await requireAuth(request);
+        } catch {
+            (response as unknown as TypedResponse).status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Securely inject authenticated user ID
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +185,17 @@ export const distillContext = onRequest(
             return;
         }
 
+        let uid: string;
+        try {
+            uid = await requireAuth(request);
+        } catch {
+            (response as unknown as TypedResponse).status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Securely inject authenticated user ID
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
