@@ -1,0 +1,3 @@
+## 2024-04-17 - Task List Virtualization
+**Learning:** Flutter's `ListView(children: [...])` instantiates all widgets eagerly. For long, dynamically grouped lists (like tasks grouped by priority), this causes severe main-thread lag and memory bloat on load. Replacing it with `ListView.builder` by flattening the hierarchical data structure into a linear model list achieves *true* O(1) memory lazy loading.
+**Action:** Always use `ListView.builder` (or `SliverList.builder`) mapped over sealed class items for heterogeneous lists. Preserve existing staggered animations by carrying local indices in the flattened model.
