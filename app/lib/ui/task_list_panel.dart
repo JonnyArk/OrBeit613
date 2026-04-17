@@ -106,9 +106,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFF1A1A2E), width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFF1A1A2E), width: 1)),
       ),
       child: Row(
         children: [
@@ -140,10 +138,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
                 ),
                 Text(
                   '${_activeTasks.length} active · ${_completedTasks.length} done',
-                  style: const TextStyle(
-                    color: Colors.white38,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ],
             ),
@@ -182,7 +177,11 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Color(0xFF9B1B30), size: 18),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFF9B1B30),
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Text(
             '$_overdueCount overdue',
@@ -211,7 +210,11 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 56, color: Colors.white.withAlpha(40)),
+            Icon(
+              Icons.inbox_outlined,
+              size: 56,
+              color: Colors.white.withAlpha(40),
+            ),
             const SizedBox(height: 16),
             Text(
               'No tasks yet',
@@ -245,12 +248,15 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
           _buildPriorityHeader(entry.key, entry.value.length),
           for (var i = 0; i < entry.value.length; i++)
             _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
+                  task: entry.value[i],
+                  onComplete: () => _completeTask(entry.value[i].id),
+                  onDelete: () => _deleteTask(entry.value[i].id),
+                )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .fadeIn(
+                  duration: 300.ms,
+                  delay: Duration(milliseconds: i * 40),
+                )
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 
@@ -259,8 +265,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
           const SizedBox(height: 8),
           _buildCompletedHeader(),
           if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
+            for (final task in _completedTasks) _CompletedTaskTile(task: task),
         ],
       ],
     );
@@ -359,9 +364,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Color(0xFF1A1A2E), width: 1),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFF1A1A2E), width: 1)),
       ),
       child: ElevatedButton.icon(
         onPressed: _showAddTaskSheet,
@@ -482,7 +485,10 @@ class _SwipeableTaskTile extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'Complete',
-              style: TextStyle(color: Colors.green.withAlpha(200), fontSize: 13),
+              style: TextStyle(
+                color: Colors.green.withAlpha(200),
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -507,7 +513,11 @@ class _SwipeableTaskTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.delete_outline, color: Color(0xFFE57373), size: 22),
+            const Icon(
+              Icons.delete_outline,
+              color: Color(0xFFE57373),
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -529,7 +539,8 @@ class _SwipeableTaskTile extends StatelessWidget {
   }
 
   Widget _buildCard(BuildContext context) {
-    final isOverdue = task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
+    final isOverdue =
+        task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -575,7 +586,8 @@ class _SwipeableTaskTile extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                if (task.description != null && task.description!.isNotEmpty) ...[
+                if (task.description != null &&
+                    task.description!.isNotEmpty) ...[
                   const SizedBox(height: 3),
                   Text(
                     task.description!,
@@ -594,15 +606,21 @@ class _SwipeableTaskTile extends StatelessWidget {
                       Icon(
                         Icons.schedule,
                         size: 12,
-                        color: isOverdue ? const Color(0xFFE57373) : Colors.white.withAlpha(60),
+                        color: isOverdue
+                            ? const Color(0xFFE57373)
+                            : Colors.white.withAlpha(60),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         _formatDueDate(task.dueDate!),
                         style: TextStyle(
-                          color: isOverdue ? const Color(0xFFE57373) : Colors.white.withAlpha(60),
+                          color: isOverdue
+                              ? const Color(0xFFE57373)
+                              : Colors.white.withAlpha(60),
                           fontSize: 11,
-                          fontWeight: isOverdue ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight: isOverdue
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -666,8 +684,20 @@ class _SwipeableTaskTile extends StatelessWidget {
       return '${diff}d overdue';
     }
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 }
@@ -688,11 +718,7 @@ class _CompletedTaskTile extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle,
-            color: Colors.green.withAlpha(60),
-            size: 18,
-          ),
+          Icon(Icons.check_circle, color: Colors.green.withAlpha(60), size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -721,7 +747,8 @@ class _AddTaskSheet extends StatefulWidget {
     String? description,
     domain.TaskPriority priority,
     DateTime? dueDate,
-  ) onSave;
+  )
+  onSave;
 
   const _AddTaskSheet({required this.onSave});
 
@@ -750,13 +777,13 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
       decoration: const BoxDecoration(
         color: Color(0xFF0A0A12),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: Color(0xFFD4AF37), width: 2),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFD4AF37), width: 2)),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          24, 20, 24,
+          24,
+          20,
+          24,
           MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: SingleChildScrollView(
@@ -959,7 +986,9 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                       color: isSelected
                           ? _colorForPriority(p)
                           : Colors.white.withAlpha(60),
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -990,20 +1019,31 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             ),
             const SizedBox(width: 10),
             Text(
-              _dueDate != null ? _formatDate(_dueDate!) : 'No due date (optional)',
+              _dueDate != null
+                  ? _formatDate(_dueDate!)
+                  : 'No due date (optional)',
               style: TextStyle(
-                color: _dueDate != null ? Colors.white : Colors.white.withAlpha(40),
+                color: _dueDate != null
+                    ? Colors.white
+                    : Colors.white.withAlpha(40),
                 fontSize: 15,
               ),
             ),
             const Spacer(),
             if (_dueDate != null)
-              GestureDetector(
-                onTap: () => setState(() => _dueDate = null),
-                child: Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white.withAlpha(60),
+              Semantics(
+                label: 'Clear due date',
+                button: true,
+                child: Tooltip(
+                  message: 'Clear due date',
+                  child: GestureDetector(
+                    onTap: () => setState(() => _dueDate = null),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.white.withAlpha(60),
+                    ),
+                  ),
                 ),
               )
             else
@@ -1067,8 +1107,18 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
