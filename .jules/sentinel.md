@@ -1,0 +1,4 @@
+## 2025-04-19 - Missing Authentication on Sensitive HTTP Endpoints
+**Vulnerability:** HTTP Cloud Functions (`creditUsage`, `generateAsset`, `distillContext`) were completely unauthenticated, allowing anyone to trigger AI generation and view cost/usage data, and exposing an IDOR vulnerability where clients could spoof the `userId` in payloads.
+**Learning:** `onRequest` functions do not inherently provide `request.auth` context like Callable Functions or Firestore rules do. The missing `@types/express` made implementing strict, typed HTTP endpoints difficult, leading to a lack of authentication wrappers.
+**Prevention:** Always implement a custom authentication middleware or helper (like `requireAuth`) for all `onRequest` functions. Derive the `userId` securely from `getAuth().verifyIdToken()` instead of trusting the client payload to prevent IDOR and unauthorized AI credit usage. Use structural typing to bypass lack of types.
