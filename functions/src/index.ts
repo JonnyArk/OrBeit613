@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -77,6 +78,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 export const creditUsage = onRequest(async (_request, response) => {
+    const uid = await requireAuth(_request, response);
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,8 +121,13 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response);
+        if (!uid) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
+            // Securely inject the user ID from the authenticated token to prevent IDOR
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +182,13 @@ export const distillContext = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response);
+        if (!uid) return;
+
         try {
             const body = request.body as DistillationRequest;
+            // Securely inject the user ID from the authenticated token to prevent IDOR
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
