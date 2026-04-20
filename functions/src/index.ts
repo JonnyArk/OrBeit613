@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -117,8 +118,12 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Securely inject authenticated UID
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +178,12 @@ export const distillContext = onRequest(
             return;
         }
 
+        const uid = await requireAuth(request, response as unknown as TypedResponse);
+        if (!uid) return;
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Securely inject authenticated UID
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
