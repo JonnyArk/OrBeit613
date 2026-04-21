@@ -9,6 +9,7 @@
  * as defined in .agent/rules/standards.md
  */
 
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
@@ -76,7 +77,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const uid = await requireAuth(
+        request as unknown as TypedRequest,
+        response as unknown as TypedResponse
+    );
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -119,6 +126,15 @@ export const generateAsset = onRequest(
 
         try {
             const body = request.body as AssetGenerationRequest;
+
+        const uid = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
+
+        // Prevent IDOR by securely injecting authenticated uid
+        body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -175,6 +191,15 @@ export const distillContext = onRequest(
 
         try {
             const body = request.body as DistillationRequest;
+
+        const uid = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
+
+        // Prevent IDOR by securely injecting authenticated uid
+        body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
