@@ -1,0 +1,4 @@
+## 2024-05-19 - Missing Authentication and IDOR on Cloud Functions
+**Vulnerability:** Core sensitive endpoints `generateAsset`, `distillContext`, and `creditUsage` lack proper authentication logic, trusting potential client-side `userId` fields which expose the system to IDOR (Insecure Direct Object Reference) vulnerabilities.
+**Learning:** `onRequest` functions inside Firebase require explicit verification of `Authorization` tokens using `firebase-admin/auth` and need proper structural typing when `@types/express` is missing to avoid typescript compilation errors.
+**Prevention:** Always extract and verify the `uid` explicitly from the token instead of trusting user-provided payloads, and inject the securely derived `uid` explicitly back into the request models (e.g., `body.userId = uid`).
