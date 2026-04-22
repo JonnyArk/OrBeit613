@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Adding accessibility to custom task completion interactions
+**Learning:** Found an accessibility issue pattern in the custom `task_list_panel` widget where the radio-button icon used for task completion lacked an ARIA-equivalent label and tooltip. This makes it challenging for screen reader users and those relying on hover states to identify its function.
+**Action:** Always wrap custom icon-only gesture detectors (`GestureDetector` with an `Icon` child) that act as interactive elements with a `Semantics` widget providing an appropriate `label` and `button: true`, along with a visual `Tooltip` for mouse users.
