@@ -1,0 +1,4 @@
+## 2025-04-22 - Missing Authentication on Sensitive AI Endpoints
+**Vulnerability:** AI endpoints (`generateAsset` and `distillContext`) lacked authentication checks and relied on client-provided `userId` within the request body.
+**Learning:** In Firebase Cloud Functions using `onRequest`, the request object does not automatically verify user authentication or populate `request.auth` (unlike `onCall`). Leaving this unprotected exposes the endpoint to unauthorized access, potentially exhausting AI credit limits and allowing IDOR/spoofing by malicious users injecting arbitrary `userId`s.
+**Prevention:** Always implement a token verification middleware or helper (like `getAuth().verifyIdToken()`) for `onRequest` endpoints. Never trust a client-provided `userId` in the payload; instead, securely inject the verified `uid` derived from the decoded token directly into the backend processing logic.
