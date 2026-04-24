@@ -180,17 +180,14 @@ class AIManager {
     async getMonthlyUsage() {
         try {
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const snapshot = await this.db
-                .collection(this.usageCollection)
-                .where("timestamp", ">=", monthStart)
-                .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+            // OPTIMIZATION: Read pre-calculated O(1) aggregate doc instead of O(N) querying all usage logs
+            const doc = await aggregateRef.get();
+            if (doc.exists) {
+                return doc.data()?.totalUsed || 0;
+            }
+            return 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });
