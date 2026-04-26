@@ -181,16 +181,15 @@ class AIManager {
         try {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const snapshot = await this.db
+            // ⚡ Bolt Optimization: Replace unbounded O(N) client-side collection scan with O(1) server-side aggregation
+            const aggregateQuery = this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
-                .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                total += data.creditsUsed || 0;
+                .aggregate({
+                totalUsed: firestore_1.AggregateField.sum("creditsUsed"),
             });
-            return total;
+            const snapshot = await aggregateQuery.get();
+            return snapshot.data().totalUsed || 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });

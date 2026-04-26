@@ -1,0 +1,3 @@
+## 2024-05-18 - Avoid O(N) reads for aggregation in Firebase
+**Learning:** When calculating aggregations like monthly credit usage, querying and summing individual raw log collections leads to unbounded O(N) reads, high latency, and excessive costs. However, manually maintaining and reading a separate aggregate document requires reliable write-side triggers to avoid silent functional regressions.
+**Action:** Always use Firestore's native `aggregate` query API (like `AggregateField.sum()`) to efficiently calculate server-side totals without the need for manual counters and triggers, preventing data staleness while maintaining performance.
