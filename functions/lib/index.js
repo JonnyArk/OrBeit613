@@ -49,6 +49,7 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -128,13 +129,24 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const res = response;
     // Only allow POST
     if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    let uid;
+    try {
+        uid = await (0, auth_1.requireAuth)(request);
+    }
+    catch (error) {
+        logger.warn("Unauthorized generateAsset request", { error });
+        res.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -175,13 +187,24 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const res = response;
     // Only allow POST
     if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    let uid;
+    try {
+        uid = await (0, auth_1.requireAuth)(request);
+    }
+    catch (error) {
+        logger.warn("Unauthorized distillContext request", { error });
+        res.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
