@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Authentication on Cloud Functions
+**Vulnerability:** Firebase v2 `onRequest` functions (`generateAsset`, `distillContext`) are public by default and were completely missing authentication checks, allowing unauthenticated attackers to invoke AI services and burn credits. Furthermore, `generateAsset` and `distillContext` relied on client-provided `userId`s to log credit usage and store events (IDOR vulnerability).
+**Learning:** Unlike v1 or callable functions, v2 `onRequest` functions must have explicitly implemented authentication when they expose sensitive or costly operations. Also, never trust the client-provided `userId` in the body payload.
+**Prevention:** Always use the `requireAuth` helper function securely verifies the ID token and provides the verified `uid`. Force override any `body.userId` with the verified `uid` to prevent IDOR and credit abuse.
