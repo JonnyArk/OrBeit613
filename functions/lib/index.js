@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -128,6 +129,11 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const typedReq = request;
+    const typedRes = response;
+    const uid = await (0, auth_1.requireAuth)(typedReq, typedRes);
+    if (!uid)
+        return;
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
@@ -135,6 +141,7 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     }
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -175,6 +182,11 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const typedReq = request;
+    const typedRes = response;
+    const uid = await (0, auth_1.requireAuth)(typedReq, typedRes);
+    if (!uid)
+        return;
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
@@ -182,6 +194,7 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     }
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
