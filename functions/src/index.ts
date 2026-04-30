@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -111,6 +112,12 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const typedReq = request as unknown as TypedRequest;
+        const typedRes = response as unknown as TypedResponse;
+
+        const uid = await requireAuth(typedReq, typedRes);
+        if (!uid) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -119,6 +126,7 @@ export const generateAsset = onRequest(
 
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -167,6 +175,12 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const typedReq = request as unknown as TypedRequest;
+        const typedRes = response as unknown as TypedResponse;
+
+        const uid = await requireAuth(typedReq, typedRes);
+        if (!uid) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -175,6 +189,7 @@ export const distillContext = onRequest(
 
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
