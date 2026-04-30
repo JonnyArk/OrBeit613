@@ -1,0 +1,3 @@
+## 2024-04-30 - Virtualized List Optimization
+**Learning:** The Flutter codebase used a standard `ListView` for tasks instead of `ListView.builder`. This causes all items (active tasks, headers, completed tasks) to be built and rendered at once, which can lead to performance bottlenecks (excessive memory use and dropped frames) as the task list grows.
+**Action:** When working with dynamically growing data or large sets in Flutter, always prefer `ListView.builder` over `ListView` with children. For heterogeneous items (headers, distinct sections), flatten the list model into discrete sealed class representations and map them using Dart 3 pattern matching to preserve structured animations.
