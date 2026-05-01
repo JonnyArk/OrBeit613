@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -128,16 +129,21 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const typedResponse = response;
     // Only allow POST
     if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
+        typedResponse.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await (0, auth_1.requireAuth)(request, typedResponse);
+    if (!uid)
+        return;
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
-            response.status(400).json({
+            typedResponse.status(400).json({
                 error: "Missing required fields: assetType and context",
             });
             return;
@@ -145,21 +151,21 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         logger.info("Asset generation request received", {
             assetType: body.assetType,
             size: body.size || "medium",
+            userId: uid,
         });
         const whiskService = (0, ai_1.getWhiskService)();
         const result = await whiskService.generateAsset(body);
-        response.json({
+        typedResponse.json({
             success: true,
             data: result,
             timestamp: new Date().toISOString(),
         });
     }
-    catch (error) {
-        logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
+    catch (_error) {
+        logger.error("Asset generation failed", { error: _error });
+        typedResponse.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "Internal server error",
         });
     }
 });
@@ -175,16 +181,21 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    const typedResponse = response;
     // Only allow POST
     if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
+        typedResponse.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await (0, auth_1.requireAuth)(request, typedResponse);
+    if (!uid)
+        return;
     try {
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
-            response.status(400).json({
+            typedResponse.status(400).json({
                 error: "Missing required fields: rawData and dataType",
             });
             return;
@@ -193,21 +204,21 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             dataType: body.dataType,
             complexity: body.complexity || "standard",
             inputLength: body.rawData.length,
+            userId: uid,
         });
         const flowService = (0, ai_1.getFlowService)();
         const result = await flowService.distillContext(body);
-        response.json({
+        typedResponse.json({
             success: true,
             data: result,
             timestamp: new Date().toISOString(),
         });
     }
-    catch (error) {
-        logger.error("Context distillation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
+    catch (_error) {
+        logger.error("Context distillation failed", { error: _error });
+        typedResponse.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "Internal server error",
         });
     }
 });
