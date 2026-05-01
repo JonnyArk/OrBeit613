@@ -1,0 +1,4 @@
+## 2026-02-05 - Missing Authentication on Firebase onRequest Functions
+**Vulnerability:** Critical AI credit generation and context distillation endpoints in `functions/src/index.ts` (`generateAsset` and `distillContext`) were completely unauthenticated and accepted user IDs directly from the client request body.
+**Learning:** Firebase v2 `onRequest` functions are public HTTP endpoints by default and do not automatically enforce authentication. Relying on client-provided user IDs allows IDOR and spoofing vulnerabilities.
+**Prevention:** Always implement explicit authentication checks on sensitive `onRequest` endpoints using `getAuth().verifyIdToken()`. Securely inject the authenticated `uid` derived from the token into the processing payload rather than trusting client input, and mask internal errors to prevent leaking sensitive stack traces.
