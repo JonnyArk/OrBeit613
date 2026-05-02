@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -133,8 +134,13 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const typedResponse = response;
+    const uid = await (0, auth_1.requireAuth)(request, typedResponse);
+    if (!uid)
+        return;
     try {
         const body = request.body;
+        body.userId = uid; // Securely set userId from auth token
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +186,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const typedResponse = response;
+    const uid = await (0, auth_1.requireAuth)(request, typedResponse);
+    if (!uid)
+        return;
     try {
         const body = request.body;
+        body.userId = uid; // Securely set userId from auth token
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
