@@ -1,0 +1,4 @@
+## 2025-05-02 - Missing Authentication on Sensitive AI Endpoints
+**Vulnerability:** The `generateAsset` and `distillContext` Firebase v2 `onRequest` Cloud Functions lacked explicit authentication checks and trusted the `userId` provided in the request body, allowing unauthorized access to AI resources and potential spoofing/IDOR attacks where users could consume credits or generate data under another user's ID.
+**Learning:** Unlike Callable functions, Firebase v2 `onRequest` functions are public by default and do not automatically enforce authentication. Additionally, trusting client-provided IDs for sensitive operations is a fundamental security risk.
+**Prevention:** Always manually implement explicit authentication checks (e.g., using `getAuth().verifyIdToken()`) on sensitive `onRequest` endpoints. Never trust client-provided user IDs; always securely inject the user's ID into the payload using the authenticated `uid`.
