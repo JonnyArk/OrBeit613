@@ -24,6 +24,8 @@ import {
     type DistillationRequest,
 } from "./ai";
 
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
+
 // Initialize Firebase Admin
 initializeApp();
 
@@ -38,14 +40,6 @@ setGlobalOptions({
 
 /**
  * Health check endpoint for monitoring service availability.
- *
- * @param _request - The incoming HTTP request
- * @param response - The HTTP response object
- * @returns JSON response with service status and timestamp
- *
- * @example
- * // GET https://us-central1-orbeit-613.cloudfunctions.net/healthCheck
- * // Response: { "status": "healthy", "project": "orbeit-613", "timestamp": "..." }
  */
 export const healthCheck = onRequest(async (_request, response) => {
     logger.info("Health check requested", { structuredData: true });
@@ -53,7 +47,8 @@ export const healthCheck = onRequest(async (_request, response) => {
     const aiManager = getAIManager();
     const usageSummary = await aiManager.getUsageSummary();
 
-    response.json({
+    const res = response as unknown as TypedResponse;
+    res.json({
         status: "healthy",
         project: "orbeit-613",
         version: "1.0.0",
@@ -68,29 +63,30 @@ export const healthCheck = onRequest(async (_request, response) => {
 
 /**
  * Credit usage summary endpoint for monitoring AI resource consumption.
- *
- * @param _request - The incoming HTTP request
- * @param response - The HTTP response object
- * @returns JSON response with credit usage statistics
- *
- * @example
- * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const res = response as unknown as TypedResponse;
     try {
+        const req = request as unknown as TypedRequest;
+        await requireAuth(req);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
         logger.info("Credit usage requested", summary);
 
-        response.json({
+        res.json({
             success: true,
             data: summary,
             timestamp: new Date().toISOString(),
         });
     } catch (error) {
         logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
+        if (error instanceof Error && error.message === "Unauthorized") {
+            res.status(401).json({ success: false, error: "Unauthorized" });
+            return;
+        }
+        res.status(500).json({
             success: false,
             error: "Failed to retrieve credit usage",
         });
@@ -99,30 +95,27 @@ export const creditUsage = onRequest(async (_request, response) => {
 
 /**
  * Generate visual asset using Whisk service.
- * Implements the Sovereign Sanctum aesthetic with caching.
- *
- * @param request - HTTP request with AssetGenerationRequest body
- * @param response - HTTP response with generated asset URL
- *
- * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
- * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const res = response as unknown as TypedResponse;
         // Only allow POST
         if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
+            res.status(405).json({ error: "Method not allowed" });
             return;
         }
 
         try {
+            const req = request as unknown as TypedRequest;
+            const uid = await requireAuth(req);
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
-                response.status(400).json({
+                res.status(400).json({
                     error: "Missing required fields: assetType and context",
                 });
                 return;
@@ -136,18 +129,20 @@ export const generateAsset = onRequest(
             const whiskService = getWhiskService();
             const result = await whiskService.generateAsset(body);
 
-            response.json({
+            res.json({
                 success: true,
                 data: result,
                 timestamp: new Date().toISOString(),
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
+            if (error instanceof Error && error.message === "Unauthorized") {
+                res.status(401).json({ success: false, error: "Unauthorized" });
+                return;
+            }
+            res.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "Internal server error",
             });
         }
     }
@@ -155,30 +150,27 @@ export const generateAsset = onRequest(
 
 /**
  * Distill raw context into structured Life Event using Flow service.
- * Implements the Sovereign Pipeline for context processing.
- *
- * @param request - HTTP request with DistillationRequest body
- * @param response - HTTP response with structured Life Event
- *
- * @example
- * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
- * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const res = response as unknown as TypedResponse;
         // Only allow POST
         if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
+            res.status(405).json({ error: "Method not allowed" });
             return;
         }
 
         try {
+            const req = request as unknown as TypedRequest;
+            const uid = await requireAuth(req);
+
             const body = request.body as DistillationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
-                response.status(400).json({
+                res.status(400).json({
                     error: "Missing required fields: rawData and dataType",
                 });
                 return;
@@ -193,18 +185,20 @@ export const distillContext = onRequest(
             const flowService = getFlowService();
             const result = await flowService.distillContext(body);
 
-            response.json({
+            res.json({
                 success: true,
                 data: result,
                 timestamp: new Date().toISOString(),
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
+            if (error instanceof Error && error.message === "Unauthorized") {
+                res.status(401).json({ success: false, error: "Unauthorized" });
+                return;
+            }
+            res.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "Internal server error",
             });
         }
     }
