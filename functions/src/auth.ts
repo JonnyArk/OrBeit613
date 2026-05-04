@@ -1,0 +1,36 @@
+import { getAuth } from "firebase-admin/auth";
+import * as logger from "firebase-functions/logger";
+
+export interface TypedRequest {
+    headers: {
+        authorization?: string;
+    };
+    body: unknown;
+    method: string;
+}
+
+export interface TypedResponse {
+    status: (code: number) => TypedResponse;
+    json: (data: unknown) => void;
+}
+
+export async function requireAuth(
+    request: TypedRequest,
+    response: TypedResponse
+): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        logger.error("Missing/invalid auth header");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decoded = await getAuth().verifyIdToken(token);
+        return decoded.uid;
+    } catch (_error) {
+        logger.error("Token verification failed");
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
