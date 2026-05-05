@@ -50,6 +50,7 @@ const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
+const auth_1 = require("./auth");
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
@@ -134,7 +135,16 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        let uid;
+        try {
+            uid = await (0, auth_1.requireAuth)(request);
+        }
+        catch (_error) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -181,7 +191,16 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         return;
     }
     try {
+        let uid;
+        try {
+            uid = await (0, auth_1.requireAuth)(request);
+        }
+        catch (_error) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const body = request.body;
+        body.userId = uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
