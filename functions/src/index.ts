@@ -16,6 +16,8 @@ import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
 // AI Services
+import { requireAuth, type AuthRequest } from "./auth";
+
 import {
     getAIManager,
     getWhiskService,
@@ -118,7 +120,16 @@ export const generateAsset = onRequest(
         }
 
         try {
+            let uid: string;
+            try {
+                uid = await requireAuth(request as unknown as AuthRequest);
+            } catch (_error) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +185,16 @@ export const distillContext = onRequest(
         }
 
         try {
+            let uid: string;
+            try {
+                uid = await requireAuth(request as unknown as AuthRequest);
+            } catch (_error) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
