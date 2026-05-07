@@ -1,0 +1,3 @@
+## 2024-03-24 - Flutter List Virtualization Delay Fix
+**Learning:** Using the raw `index` directly for animation delays in `ListView.builder` combined with `flutter_animate` creates massive visual delays (e.g., `delay: Duration(milliseconds: index * 50)`) for items that are lazily loaded deep in the list as the user scrolls. The index might be 100, resulting in a 5 second delay before the item becomes visible when it scrolls into view.
+**Action:** Always cap the index used for animation delays in virtualized lists. Import `dart:math` and use `min(index, 10)` or similar to ensure items appearing later in the scroll list animate promptly.
