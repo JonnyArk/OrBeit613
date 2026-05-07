@@ -49,6 +49,7 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -134,6 +135,13 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         return;
     }
     try {
+        await (0, auth_1.requireAuth)(request);
+    }
+    catch (_error) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
         const body = request.body;
         // Validate required fields
         if (!body.assetType || !body.context) {
@@ -178,6 +186,13 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    try {
+        await (0, auth_1.requireAuth)(request);
+    }
+    catch (_error) {
+        response.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
