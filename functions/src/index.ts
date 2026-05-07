@@ -15,6 +15,8 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
+import { requireAuth } from "./auth";
+
 // AI Services
 import {
     getAIManager,
@@ -118,6 +120,13 @@ export const generateAsset = onRequest(
         }
 
         try {
+            await requireAuth(request as unknown as { headers: { authorization?: string } });
+        } catch (_error) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -170,6 +179,13 @@ export const distillContext = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        try {
+            await requireAuth(request as unknown as { headers: { authorization?: string } });
+        } catch (_error) {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 
