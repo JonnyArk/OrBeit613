@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { requireAuth } from "./auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -77,6 +78,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 export const creditUsage = onRequest(async (_request, response) => {
+    const user = await requireAuth(_request as unknown as import("./auth").TypedRequest, response as unknown as import("./auth").TypedResponse);
+    if (!user) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,6 +121,9 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const user = await requireAuth(request as unknown as import("./auth").TypedRequest, response as unknown as import("./auth").TypedResponse);
+        if (!user) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -143,11 +150,9 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "Internal Server Error",
             });
         }
     }
@@ -172,6 +177,9 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        const user = await requireAuth(request as unknown as import("./auth").TypedRequest, response as unknown as import("./auth").TypedResponse);
+        if (!user) return;
 
         try {
             const body = request.body as DistillationRequest;
@@ -200,11 +208,9 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "Internal Server Error",
             });
         }
     }
