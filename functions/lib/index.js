@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -97,11 +98,15 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized data access
+    const uid = await (0, auth_1.requireAuth)(request, response);
+    if (!uid)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
-        logger.info("Credit usage requested", summary);
+        logger.info("Credit usage requested by user", { uid, summary });
         response.json({
             success: true,
             data: summary,
@@ -133,6 +138,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI credit usage
+    const uid = await (0, auth_1.requireAuth)(request, response);
+    if (!uid)
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -180,6 +189,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI credit usage
+    const uid = await (0, auth_1.requireAuth)(request, response);
+    if (!uid)
+        return;
     try {
         const body = request.body;
         // Validate required fields

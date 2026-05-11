@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type RequestWithAuth, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -76,12 +77,19 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized data access
+    const uid = await requireAuth(
+        request as unknown as RequestWithAuth,
+        response as unknown as TypedResponse
+    );
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
-        logger.info("Credit usage requested", summary);
+        logger.info("Credit usage requested by user", { uid, summary });
 
         response.json({
             success: true,
@@ -116,6 +124,13 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI credit usage
+        const uid = await requireAuth(
+            request as unknown as RequestWithAuth,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -172,6 +187,13 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI credit usage
+        const uid = await requireAuth(
+            request as unknown as RequestWithAuth,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
 
         try {
             const body = request.body as DistillationRequest;
