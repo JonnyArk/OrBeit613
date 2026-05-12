@@ -3,7 +3,6 @@ import '../../domain/entities/genesis_kit.dart';
 import '../../domain/repositories/genesis_repository.dart';
 import '../database.dart';
 
-
 /// Concrete implementation of [GenesisRepository] using drift transactions.
 class GenesisRepositoryImpl implements GenesisRepository {
   final AppDatabase database;
@@ -15,7 +14,9 @@ class GenesisRepositoryImpl implements GenesisRepository {
     await database.transaction(() async {
       // 1. Spawn Nodes (Buildings/Objects)
       for (final node in kit.nodes) {
-        await database.into(database.buildings).insert(
+        await database
+            .into(database.buildings)
+            .insert(
               BuildingsCompanion.insert(
                 type: node.type,
                 x: originX + node.offsetX,
@@ -28,7 +29,9 @@ class GenesisRepositoryImpl implements GenesisRepository {
 
       // 2. Spawn Tasks
       for (final task in kit.tasks) {
-        await database.into(database.tasks).insert(
+        await database
+            .into(database.tasks)
+            .insert(
               TasksCompanion.insert(
                 title: task.title,
                 description: Value(task.description),

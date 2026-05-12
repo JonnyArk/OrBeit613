@@ -87,10 +87,9 @@ class BuildingSelectorPanel extends StatelessWidget {
         children: [
           _buildHeader(),
           const SizedBox(height: 16),
-          ...buildingTypes.map((type) => _BuildingTile(
-            type: type,
-            onTap: () => onSelect(type),
-          )),
+          ...buildingTypes.map(
+            (type) => _BuildingTile(type: type, onTap: () => onSelect(type)),
+          ),
         ],
       ),
     );
