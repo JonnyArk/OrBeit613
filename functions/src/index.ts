@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -76,8 +77,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const uid = await requireAuth(request as unknown as import("./auth").AuthRequest);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,6 +124,11 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await requireAuth(request as unknown as import("./auth").AuthRequest);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -174,6 +185,11 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await requireAuth(request as unknown as import("./auth").AuthRequest);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
             const body = request.body as DistillationRequest;
 
             // Validate required fields
