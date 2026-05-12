@@ -30,7 +30,6 @@ class IsometricGrid extends PositionComponent {
   /// Cached sprites for each terrain type
   final Map<TerrainType, Sprite?> _spriteCache = {};
 
-
   IsometricGrid({
     required this.terrainData,
     this.tileWidth = 64.0,
@@ -90,12 +89,17 @@ class IsometricGrid extends PositionComponent {
   }
 
   /// Renders a colored diamond tile as fallback when sprites aren't available
-  void _renderFallbackTile(Canvas canvas, double x, double y, TerrainType type) {
+  void _renderFallbackTile(
+    Canvas canvas,
+    double x,
+    double y,
+    TerrainType type,
+  ) {
     final path = Path()
-      ..moveTo(x, y - tileHeight / 2)                 // top
-      ..lineTo(x + tileWidth / 2, y)                   // right
-      ..lineTo(x, y + tileHeight / 2)                  // bottom
-      ..lineTo(x - tileWidth / 2, y)                   // left
+      ..moveTo(x, y - tileHeight / 2) // top
+      ..lineTo(x + tileWidth / 2, y) // right
+      ..lineTo(x, y + tileHeight / 2) // bottom
+      ..lineTo(x - tileWidth / 2, y) // left
       ..close();
 
     final Color fillColor;
