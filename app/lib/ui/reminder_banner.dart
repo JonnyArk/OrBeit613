@@ -163,10 +163,17 @@ class _ReminderBannerState extends State<ReminderBanner>
                 ),
                 GestureDetector(
                   onTap: _dismiss,
-                  child: const Icon(
-                    Icons.close,
-                    color: Color(0xFF808080),
-                    size: 16,
+                  child: Semantics(
+                    label: 'Dismiss reminder',
+                    button: true,
+                    child: const Tooltip(
+                      message: 'Dismiss reminder',
+                      child: Icon(
+                        Icons.close,
+                        color: Color(0xFF808080),
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ),
               ],
