@@ -616,10 +616,17 @@ class _SwipeableTaskTile extends StatelessWidget {
             onTap: onComplete,
             child: Container(
               padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.white.withAlpha(40),
-                size: 22,
+              child: Semantics(
+                label: 'Complete task',
+                button: true,
+                child: Tooltip(
+                  message: 'Complete task',
+                  child: Icon(
+                    Icons.radio_button_unchecked,
+                    color: Colors.white.withAlpha(40),
+                    size: 22,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1000,10 +1007,17 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             if (_dueDate != null)
               GestureDetector(
                 onTap: () => setState(() => _dueDate = null),
-                child: Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white.withAlpha(60),
+                child: Semantics(
+                  label: 'Clear due date',
+                  button: true,
+                  child: Tooltip(
+                    message: 'Clear due date',
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.white.withAlpha(60),
+                    ),
+                  ),
                 ),
               )
             else
