@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type AuthRequest, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -117,8 +118,16 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Require authentication
+        const uid = await requireAuth(
+            request as unknown as AuthRequest,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // Inject verified user ID
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -143,11 +152,9 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred during asset generation",
             });
         }
     }
@@ -173,8 +180,16 @@ export const distillContext = onRequest(
             return;
         }
 
+        // Require authentication
+        const uid = await requireAuth(
+            request as unknown as AuthRequest,
+            response as unknown as TypedResponse
+        );
+        if (!uid) return;
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = uid; // Inject verified user ID
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -200,11 +215,9 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred during context distillation",
             });
         }
     }
