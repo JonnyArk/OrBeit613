@@ -49,6 +49,7 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -87,17 +88,10 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
         },
     });
 });
-/**
- * Credit usage summary endpoint for monitoring AI resource consumption.
- *
- * @param _request - The incoming HTTP request
- * @param response - The HTTP response object
- * @returns JSON response with credit usage statistics
- *
- * @example
- * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
- */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // 🛡️ Sentinel: Enforce authentication
+    if (!(await (0, auth_1.requireAuth)(request, response)))
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,6 +127,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized API usage
+    if (!(await (0, auth_1.requireAuth)(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -156,10 +153,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     }
     catch (error) {
         logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        // 🛡️ Sentinel: Return generic error message to prevent information leakage
         response.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "An internal error occurred",
         });
     }
 });
@@ -180,6 +177,9 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized API usage
+    if (!(await (0, auth_1.requireAuth)(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -204,10 +204,10 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     }
     catch (error) {
         logger.error("Context distillation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        // 🛡️ Sentinel: Return generic error message to prevent information leakage
         response.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "An internal error occurred",
         });
     }
 });
