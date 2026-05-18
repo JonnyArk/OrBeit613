@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -77,6 +78,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 export const creditUsage = onRequest(async (_request, response) => {
+    const uid = await requireAuth(_request as unknown as TypedRequest, response as unknown as TypedResponse);
+    if (!uid) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -92,7 +96,7 @@ export const creditUsage = onRequest(async (_request, response) => {
         logger.error("Failed to get credit usage", { error });
         response.status(500).json({
             success: false,
-            error: "Failed to retrieve credit usage",
+            error: "An internal error occurred",
         });
     }
 });
@@ -116,6 +120,9 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        const uid = await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse);
+        if (!uid) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -143,11 +150,9 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
@@ -172,6 +177,9 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        const uid = await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse);
+        if (!uid) return;
 
         try {
             const body = request.body as DistillationRequest;
@@ -200,11 +208,9 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
