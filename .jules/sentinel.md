@@ -1,0 +1,5 @@
+## 2025-05-18 - Exposed Stack Traces and Unauthenticated Endpoints
+
+**Vulnerability:** Several Firebase Cloud Functions endpoints, such as `creditUsage`, `distillContext`, and `generateAsset`, leak internal information by returning `error.message` or plain error details directly to clients when internal errors occur. Furthermore, endpoints are missing strong authentication wrappers, notably leaving `creditUsage` totally unauthenticated, which could lead to Denial of Service or unauthorized information disclosure.
+**Learning:** Returning unhandled exception data to clients inherently exposes application state and potential stack details. Not validating `request.auth` properly or requiring tokens leads to endpoints acting essentially as public APIs unless protected.
+**Prevention:** Implement `requireAuth` (verifying tokens manually or using Firebase's native `onCall` which validates auth automatically) to ensure endpoints are authenticated. Replace direct error reporting in `catch` blocks with generic error messages and ensure all detailed error info is strictly logged via `logger.error` internally.

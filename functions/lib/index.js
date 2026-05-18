@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -98,6 +99,9 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+    const uid = await (0, auth_1.requireAuth)(_request, response);
+    if (!uid)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -112,7 +116,7 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
         logger.error("Failed to get credit usage", { error });
         response.status(500).json({
             success: false,
-            error: "Failed to retrieve credit usage",
+            error: "An internal error occurred",
         });
     }
 });
@@ -133,6 +137,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await (0, auth_1.requireAuth)(request, response);
+    if (!uid)
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -156,10 +163,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     }
     catch (error) {
         logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         response.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "An internal error occurred",
         });
     }
 });
@@ -180,6 +186,9 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const uid = await (0, auth_1.requireAuth)(request, response);
+    if (!uid)
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -204,10 +213,9 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     }
     catch (error) {
         logger.error("Context distillation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         response.status(500).json({
             success: false,
-            error: errorMessage,
+            error: "An internal error occurred",
         });
     }
 });
