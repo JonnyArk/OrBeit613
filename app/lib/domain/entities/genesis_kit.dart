@@ -27,18 +27,8 @@ class GenesisKit {
     name: 'The Steward',
     description: 'The foundation of sovereignty: Home, Barn, and Transport.',
     nodes: [
-      GenesisNode(
-        type: 'farmhouse_base',
-        offsetX: 0,
-        offsetY: 0,
-        rotation: 0,
-      ),
-      GenesisNode(
-        type: 'barn_red_big',
-        offsetX: 3,
-        offsetY: -2,
-        rotation: 90,
-      ),
+      GenesisNode(type: 'farmhouse_base', offsetX: 0, offsetY: 0, rotation: 0),
+      GenesisNode(type: 'barn_red_big', offsetX: 3, offsetY: -2, rotation: 90),
       GenesisNode(
         type: 'pickup_truck_white',
         offsetX: -2,
@@ -74,44 +64,24 @@ class GenesisKit {
     name: 'The Settlement',
     description: 'A small community hub with health and growth.',
     nodes: [
-      GenesisNode(
-        type: 'pharmacy_small',
-        offsetX: 0,
-        offsetY: 0,
-      ),
-      GenesisNode(
-        type: 'doctor_office',
-        offsetX: 4,
-        offsetY: 0,
-      ),
-      GenesisNode(
-        type: 'garden_plot',
-        offsetX: 2,
-        offsetY: 3,
-      ),
-      GenesisNode(
-        type: 'oak_tree',
-        offsetX: -2,
-        offsetY: 2,
-      ),
-       GenesisNode(
-        type: 'pine_tree',
-        offsetX: 6,
-        offsetY: 2,
-      ),
+      GenesisNode(type: 'pharmacy_small', offsetX: 0, offsetY: 0),
+      GenesisNode(type: 'doctor_office', offsetX: 4, offsetY: 0),
+      GenesisNode(type: 'garden_plot', offsetX: 2, offsetY: 3),
+      GenesisNode(type: 'oak_tree', offsetX: -2, offsetY: 2),
+      GenesisNode(type: 'pine_tree', offsetX: 6, offsetY: 2),
     ],
     tasks: [
       GenesisTask(
         title: 'Register with Dr. Smith',
         description: 'Set up initial health consultation.',
         relativeX: 4,
-        relativeY: 0, 
+        relativeY: 0,
       ),
-       GenesisTask(
+      GenesisTask(
         title: 'Plant Spring Seeds',
         description: 'Prepare the garden plot for the season.',
         relativeX: 2,
-        relativeY: 3, 
+        relativeY: 3,
       ),
     ],
   );
