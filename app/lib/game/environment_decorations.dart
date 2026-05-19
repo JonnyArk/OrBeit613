@@ -15,12 +15,7 @@ import 'terrain_tile.dart';
 import 'world_terrain_data.dart';
 
 /// Types of environment decorations
-enum DecorationType {
-  oakTree,
-  pineTree,
-  bush,
-  rocks,
-}
+enum DecorationType { oakTree, pineTree, bush, rocks }
 
 /// Sprite paths for each decoration type
 extension DecorationSprite on DecorationType {
@@ -72,10 +67,8 @@ class DecorationComponent extends PositionComponent {
   Sprite? _sprite;
   bool _spriteLoaded = false;
 
-  DecorationComponent({required this.placement}) : super(
-    size: placement.type.spriteSize,
-    anchor: Anchor.bottomCenter,
-  );
+  DecorationComponent({required this.placement})
+    : super(size: placement.type.spriteSize, anchor: Anchor.bottomCenter);
 
   @override
   Future<void> onLoad() async {
@@ -206,10 +199,7 @@ class DecorationComponent extends PositionComponent {
       ..lineTo(w * 0.9, h * 0.9)
       ..close();
 
-    canvas.drawPath(
-      rockPath,
-      Paint()..color = const Color(0xFF78909C),
-    );
+    canvas.drawPath(rockPath, Paint()..color = const Color(0xFF78909C));
     canvas.drawPath(
       rockPath,
       Paint()
@@ -256,11 +246,7 @@ class EnvironmentDecorationGenerator {
           type = DecorationType.rocks;
         }
 
-        placements.add(DecorationPlacement(
-          type: type,
-          col: col,
-          row: row,
-        ));
+        placements.add(DecorationPlacement(type: type, col: col, row: row));
       }
     }
 

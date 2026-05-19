@@ -23,10 +23,12 @@ final allTasksProvider = FutureProvider<List<Task>>((ref) async {
 });
 
 /// Tasks for the currently selected building
-final tasksForSelectedBuildingProvider = FutureProvider<List<Task>>((ref) async {
+final tasksForSelectedBuildingProvider = FutureProvider<List<Task>>((
+  ref,
+) async {
   final buildingId = ref.watch(selectedBuildingIdProvider);
   if (buildingId == null) return [];
-  
+
   final repo = ref.watch(taskRepositoryProvider);
   return repo.getTasksForBuilding(buildingId);
 });

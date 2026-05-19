@@ -96,9 +96,6 @@ class SecureStorageService {
 
   /// Record authentication timestamp
   Future<void> recordAuth() async {
-    await write(
-      SecureKeys.lastAuthTimestamp,
-      DateTime.now().toIso8601String(),
-    );
+    await write(SecureKeys.lastAuthTimestamp, DateTime.now().toIso8601String());
   }
 }
