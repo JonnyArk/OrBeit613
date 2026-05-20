@@ -49,6 +49,8 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+// Auth Helper
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -133,6 +135,11 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Require authentication
+    const decodedToken = await (0, auth_1.requireAuth)(request, response);
+    if (!decodedToken) {
+        return; // requireAuth already sent the 401 response
+    }
     try {
         const body = request.body;
         // Validate required fields
@@ -179,6 +186,11 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
         return;
+    }
+    // Require authentication
+    const decodedToken = await (0, auth_1.requireAuth)(request, response);
+    if (!decodedToken) {
+        return; // requireAuth already sent the 401 response
     }
     try {
         const body = request.body;
