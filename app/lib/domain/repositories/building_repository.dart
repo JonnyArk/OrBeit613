@@ -16,9 +16,9 @@ abstract class BuildingRepository {
   /// Returns a list of [Building] entities ordered by placement time.
   /// Returns an empty list if no buildings exist.
   Future<List<Building>> getAllBuildings();
-  
+
   /// Watches for changes to the building list.
-  /// 
+  ///
   /// Returns a stream that emits a new list of buildings whenever
   /// the underlying data changes.
   Stream<List<Building>> watchAllBuildings();

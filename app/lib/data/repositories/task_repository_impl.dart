@@ -52,15 +52,17 @@ class TaskRepositoryImpl implements TaskRepository {
     int? buildingId,
     DateTime? dueDate,
   }) async {
-    final id = await _database.into(_database.tasks).insert(
-      TasksCompanion.insert(
-        title: title,
-        description: Value(description),
-        priority: Value(_priorityToInt(priority)),
-        buildingId: Value(buildingId),
-        dueDate: Value(dueDate),
-      ),
-    );
+    final id = await _database
+        .into(_database.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: title,
+            description: Value(description),
+            priority: Value(_priorityToInt(priority)),
+            buildingId: Value(buildingId),
+            dueDate: Value(dueDate),
+          ),
+        );
 
     return domain.Task(
       id: id,
@@ -76,9 +78,9 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<domain.Task> updateTask(domain.Task task) async {
-    await (_database.update(_database.tasks)
-          ..where((t) => t.id.equals(task.id)))
-        .write(
+    await (_database.update(
+      _database.tasks,
+    )..where((t) => t.id.equals(task.id))).write(
       TasksCompanion(
         title: Value(task.title),
         description: Value(task.description),
@@ -102,17 +104,18 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<bool> deleteTask(int id) async {
-    final count = await (_database.delete(_database.tasks)
-          ..where((t) => t.id.equals(id)))
-        .go();
+    final count = await (_database.delete(
+      _database.tasks,
+    )..where((t) => t.id.equals(id))).go();
     return count > 0;
   }
 
   @override
   Future<List<domain.Task>> getOverdueTasks() async {
     final now = DateTime.now();
-    final query = _database.select(_database.tasks)
-      ..where((t) => t.dueDate.isSmallerThanValue(now) & t.completedAt.isNull());
+    final query = _database.select(
+      _database.tasks,
+    )..where((t) => t.dueDate.isSmallerThanValue(now) & t.completedAt.isNull());
     final rows = await query.get();
     return rows.map(_toDomainTask).toList();
   }
@@ -122,12 +125,14 @@ class TaskRepositoryImpl implements TaskRepository {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
-    
+
     final query = _database.select(_database.tasks)
-      ..where((t) => 
-        t.dueDate.isBiggerOrEqualValue(startOfDay) & 
-        t.dueDate.isSmallerThanValue(endOfDay) &
-        t.completedAt.isNull());
+      ..where(
+        (t) =>
+            t.dueDate.isBiggerOrEqualValue(startOfDay) &
+            t.dueDate.isSmallerThanValue(endOfDay) &
+            t.completedAt.isNull(),
+      );
     final rows = await query.get();
     return rows.map(_toDomainTask).toList();
   }
@@ -138,9 +143,9 @@ class TaskRepositoryImpl implements TaskRepository {
       title: row.title,
       description: row.description,
       priority: _intToPriority(row.priority),
-      status: row.completedAt != null 
-        ? domain.TaskStatus.completed 
-        : domain.TaskStatus.pending,
+      status: row.completedAt != null
+          ? domain.TaskStatus.completed
+          : domain.TaskStatus.pending,
       buildingId: row.buildingId,
       createdAt: row.createdAt,
       dueDate: row.dueDate,
@@ -150,19 +155,27 @@ class TaskRepositoryImpl implements TaskRepository {
 
   int _priorityToInt(domain.TaskPriority priority) {
     switch (priority) {
-      case domain.TaskPriority.low: return 0;
-      case domain.TaskPriority.medium: return 1;
-      case domain.TaskPriority.high: return 2;
-      case domain.TaskPriority.urgent: return 3;
+      case domain.TaskPriority.low:
+        return 0;
+      case domain.TaskPriority.medium:
+        return 1;
+      case domain.TaskPriority.high:
+        return 2;
+      case domain.TaskPriority.urgent:
+        return 3;
     }
   }
 
   domain.TaskPriority _intToPriority(int priority) {
     switch (priority) {
-      case 0: return domain.TaskPriority.low;
-      case 2: return domain.TaskPriority.high;
-      case 3: return domain.TaskPriority.urgent;
-      default: return domain.TaskPriority.medium;
+      case 0:
+        return domain.TaskPriority.low;
+      case 2:
+        return domain.TaskPriority.high;
+      case 3:
+        return domain.TaskPriority.urgent;
+      default:
+        return domain.TaskPriority.medium;
     }
   }
 }

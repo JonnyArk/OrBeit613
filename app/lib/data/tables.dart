@@ -22,21 +22,21 @@ import 'package:drift/drift.dart';
 class Buildings extends Table {
   /// Auto-incrementing primary key
   IntColumn get id => integer().autoIncrement()();
-  
+
   /// Building type identifier (e.g., 'farmhouse_white', 'modern_office')
   /// Used to determine visual asset and behavior
   TextColumn get type => text()();
-  
+
   /// X coordinate in isometric grid space
   RealColumn get x => real()();
-  
+
   /// Y coordinate in isometric grid space
   RealColumn get y => real()();
-  
+
   /// Rotation in degrees (0, 90, 180, 270)
   /// Defaults to 0 (facing north)
   IntColumn get rotation => integer().withDefault(const Constant(0))();
-  
+
   /// Timestamp when building was placed
   /// Automatically set to current time
   DateTimeColumn get placedAt => dateTime().withDefault(currentDateAndTime)();

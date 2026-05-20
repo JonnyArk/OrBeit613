@@ -80,18 +80,25 @@ BOUNDARIES:
 enum OrIntent {
   /// User wants to create or place a building
   buildingCreate,
+
   /// User wants to manage tasks
   taskManage,
+
   /// User wants to record something
   eventRecord,
+
   /// User is asking a question
   question,
+
   /// User wants to navigate the world
   navigation,
+
   /// User is giving a general command
   command,
+
   /// Greeting or small talk
   greeting,
+
   /// Intent couldn't be determined
   unknown,
 }
@@ -126,10 +133,7 @@ class OrIntelligence {
   GenerativeModel? _geminiModel;
   ChatSession? _chatSession;
 
-  OrIntelligence({
-    required this.secureStorage,
-    required this.cacheService,
-  });
+  OrIntelligence({required this.secureStorage, required this.cacheService});
 
   /// Initialize the Gemini model (if API key available)
   Future<bool> initialize() async {
@@ -161,7 +165,13 @@ class OrIntelligence {
     final lower = input.toLowerCase().trim();
 
     // Building commands
-    if (_matchesAny(lower, ['build', 'place', 'create building', 'add building', 'new building'])) {
+    if (_matchesAny(lower, [
+      'build',
+      'place',
+      'create building',
+      'add building',
+      'new building',
+    ])) {
       final buildingType = _extractBuildingType(lower);
       return OrIntentResult(
         intent: OrIntent.buildingCreate,
@@ -172,20 +182,41 @@ class OrIntelligence {
     }
 
     // Task commands
-    if (_matchesAny(lower, ['task', 'todo', 'to do', 'remind', 'add task', 'new task'])) {
+    if (_matchesAny(lower, [
+      'task',
+      'todo',
+      'to do',
+      'remind',
+      'add task',
+      'new task',
+    ])) {
       return OrIntentResult(
         intent: OrIntent.taskManage,
-        taskDescription: _extractAfterKeyword(lower, ['task', 'todo', 'remind']),
+        taskDescription: _extractAfterKeyword(lower, [
+          'task',
+          'todo',
+          'remind',
+        ]),
         rawQuery: input,
         confidence: 0.85,
       );
     }
 
     // Event recording
-    if (_matchesAny(lower, ['remember', 'note', 'record', 'happened', 'event'])) {
+    if (_matchesAny(lower, [
+      'remember',
+      'note',
+      'record',
+      'happened',
+      'event',
+    ])) {
       return OrIntentResult(
         intent: OrIntent.eventRecord,
-        eventDescription: _extractAfterKeyword(lower, ['remember', 'note', 'record']),
+        eventDescription: _extractAfterKeyword(lower, [
+          'remember',
+          'note',
+          'record',
+        ]),
         rawQuery: input,
         confidence: 0.8,
       );
@@ -201,7 +232,14 @@ class OrIntelligence {
     }
 
     // Greetings
-    if (_matchesAny(lower, ['hello', 'hi', 'hey', 'shalom', 'good morning', 'good evening'])) {
+    if (_matchesAny(lower, [
+      'hello',
+      'hi',
+      'hey',
+      'shalom',
+      'good morning',
+      'good evening',
+    ])) {
       return OrIntentResult(
         intent: OrIntent.greeting,
         rawQuery: input,
@@ -210,7 +248,8 @@ class OrIntelligence {
     }
 
     // Questions
-    if (lower.contains('?') || _matchesAny(lower, ['what', 'where', 'when', 'how', 'who', 'why'])) {
+    if (lower.contains('?') ||
+        _matchesAny(lower, ['what', 'where', 'when', 'how', 'who', 'why'])) {
       return OrIntentResult(
         intent: OrIntent.question,
         rawQuery: input,
@@ -249,9 +288,7 @@ class OrIntelligence {
     // Fall back to Gemini for complex/ambiguous inputs
     if (_chatSession != null) {
       try {
-        final response = await _chatSession!.sendMessage(
-          Content.text(input),
-        );
+        final response = await _chatSession!.sendMessage(Content.text(input));
         final text = response.text;
         if (text != null && text.isNotEmpty) {
           // Cache the insight
@@ -275,8 +312,8 @@ class OrIntelligence {
   String? _generateLocalResponse(OrIntentResult intent) {
     switch (intent.intent) {
       case OrIntent.greeting:
-        return OrPersonality.greetings[
-            DateTime.now().second % OrPersonality.greetings.length];
+        return OrPersonality.greetings[DateTime.now().second %
+            OrPersonality.greetings.length];
 
       case OrIntent.buildingCreate:
         if (intent.buildingType != null) {
@@ -297,8 +334,8 @@ class OrIntelligence {
         return 'What would you like me to remember?';
 
       case OrIntent.command:
-        return OrPersonality.acknowledgments[
-            DateTime.now().second % OrPersonality.acknowledgments.length];
+        return OrPersonality.acknowledgments[DateTime.now().second %
+            OrPersonality.acknowledgments.length];
 
       case OrIntent.navigation:
         return 'Where would you like to go in your world?';
@@ -348,22 +385,25 @@ class OrIntelligence {
     }
     // Priority 3: Time-based suggestions
     else if (now.hour >= 6 && now.hour <= 8 && totalActiveCount > 0) {
-      insight = 'Good morning. You have $totalActiveCount active tasks. '
+      insight =
+          'Good morning. You have $totalActiveCount active tasks. '
           'What\'s the priority today?';
-    }
-    else if (now.hour >= 17 && now.hour <= 19) {
-      insight = 'Evening review: How did today go? '
+    } else if (now.hour >= 17 && now.hour <= 19) {
+      insight =
+          'Evening review: How did today go? '
           'Record a memory or review your tasks.';
     }
     // Priority 4: Weekly review (Friday/Saturday)
     else if ((now.weekday == DateTime.friday && now.hour >= 16) ||
-             (now.weekday == DateTime.saturday && now.hour <= 11)) {
-      insight = 'It\'s a good time for a weekly review. '
+        (now.weekday == DateTime.saturday && now.hour <= 11)) {
+      insight =
+          'It\'s a good time for a weekly review. '
           'Reflect on what was accomplished and plan ahead.';
     }
     // Priority 5: Empty world nudge
     else if (buildingCount <= 1 && totalActiveCount == 0) {
-      insight = 'Your world is quiet. Try adding a task or building '
+      insight =
+          'Your world is quiet. Try adding a task or building '
           'to start shaping your Beit.';
     }
 
@@ -386,7 +426,16 @@ class OrIntelligence {
   }
 
   String? _extractBuildingType(String input) {
-    final types = ['house', 'barn', 'workshop', 'study', 'garden', 'temple', 'office', 'market'];
+    final types = [
+      'house',
+      'barn',
+      'workshop',
+      'study',
+      'garden',
+      'temple',
+      'office',
+      'market',
+    ];
     for (final type in types) {
       if (input.contains(type)) return type;
     }

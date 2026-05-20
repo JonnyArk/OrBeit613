@@ -13,11 +13,7 @@ class WorldTerrainData {
   final int rows;
   late final List<List<TerrainType>> _grid;
 
-  WorldTerrainData({
-    this.columns = 20,
-    this.rows = 20,
-    int? seed,
-  }) {
+  WorldTerrainData({this.columns = 20, this.rows = 20, int? seed}) {
     _grid = _generateTerrain(seed ?? 42);
   }
 
@@ -141,7 +137,12 @@ class WorldTerrainData {
         if (snapshot[col][row] != TerrainType.water) continue;
 
         // Check all 4 neighbors
-        for (final d in [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        for (final d in [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ]) {
           final nc = col + d[0];
           final nr = row + d[1];
           if (nc >= 0 && nc < columns && nr >= 0 && nr < rows) {
