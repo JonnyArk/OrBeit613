@@ -15,6 +15,9 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
+// Auth Helper
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
+
 // AI Services
 import {
     getAIManager,
@@ -117,6 +120,15 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Require authentication
+        const decodedToken = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!decodedToken) {
+            return; // requireAuth already sent the 401 response
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -171,6 +183,15 @@ export const distillContext = onRequest(
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
             return;
+        }
+
+        // Require authentication
+        const decodedToken = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!decodedToken) {
+            return; // requireAuth already sent the 401 response
         }
 
         try {
