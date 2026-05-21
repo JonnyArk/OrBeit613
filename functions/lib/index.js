@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -97,7 +98,10 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    const auth = await (0, auth_1.requireAuth)(request, response);
+    if (!auth)
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,8 +137,12 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const auth = await (0, auth_1.requireAuth)(request, response);
+    if (!auth)
+        return;
     try {
         const body = request.body;
+        body.userId = auth.uid; // Set the user ID for usage tracking
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +188,12 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    const auth = await (0, auth_1.requireAuth)(request, response);
+    if (!auth)
+        return;
     try {
         const body = request.body;
+        body.userId = auth.uid; // Set the user ID for usage tracking
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
