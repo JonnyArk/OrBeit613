@@ -26,14 +26,7 @@ typedef OnSpeechResult = void Function(String text, bool isFinal);
 typedef OnStatusChange = void Function(VoiceStatus status);
 
 /// Voice service status
-enum VoiceStatus {
-  idle,
-  listening,
-  processing,
-  speaking,
-  error,
-  unavailable,
-}
+enum VoiceStatus { idle, listening, processing, speaking, error, unavailable }
 
 /// Unified voice interaction service
 ///
