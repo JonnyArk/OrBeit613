@@ -51,6 +51,7 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -128,6 +129,10 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    // 🛡️ Sentinel: Add authentication to prevent unauthorized API usage
+    const auth = await (0, auth_1.requireAuth)(request, response);
+    if (!auth)
+        return;
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
@@ -175,6 +180,10 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+    // 🛡️ Sentinel: Add authentication to prevent unauthorized API usage
+    const auth = await (0, auth_1.requireAuth)(request, response);
+    if (!auth)
+        return;
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
