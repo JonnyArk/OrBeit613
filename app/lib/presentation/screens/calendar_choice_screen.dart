@@ -20,10 +20,7 @@ class CalendarChoiceScreen extends StatefulWidget {
   /// Called when the user makes their selection
   final void Function(CalendarMode mode) onModeSelected;
 
-  const CalendarChoiceScreen({
-    super.key,
-    required this.onModeSelected,
-  });
+  const CalendarChoiceScreen({super.key, required this.onModeSelected});
 
   @override
   State<CalendarChoiceScreen> createState() => _CalendarChoiceScreenState();
@@ -95,8 +92,8 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
             colors: _selectedMode == CalendarMode.hebrew
                 ? [const Color(0xFF0D0D1A), const Color(0xFF141428)]
                 : _selectedMode == CalendarMode.western
-                    ? [const Color(0xFF050510), const Color(0xFF0A0A1A)]
-                    : [Colors.black, const Color(0xFF050510)],
+                ? [const Color(0xFF050510), const Color(0xFF0A0A1A)]
+                : [Colors.black, const Color(0xFF050510)],
           ),
         ),
         child: Stack(
@@ -145,8 +142,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                             Text(
                               'This shapes how your world breathes.',
                               style: TextStyle(
-                                color: const Color(0xFFF5F0E8)
-                                    .withAlpha(100),
+                                color: const Color(0xFFF5F0E8).withAlpha(100),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w300,
                                 letterSpacing: 1.0,
@@ -171,23 +167,18 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                         curve: Curves.easeOutCubic,
                         child: isLandscape
                             ? Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  _buildModeCard(
-                                      CalendarMode.western, size),
+                                  _buildModeCard(CalendarMode.western, size),
                                   const SizedBox(width: 32),
-                                  _buildModeCard(
-                                      CalendarMode.hebrew, size),
+                                  _buildModeCard(CalendarMode.hebrew, size),
                                 ],
                               )
                             : Column(
                                 children: [
-                                  _buildModeCard(
-                                      CalendarMode.western, size),
+                                  _buildModeCard(CalendarMode.western, size),
                                   const SizedBox(height: 24),
-                                  _buildModeCard(
-                                      CalendarMode.hebrew, size),
+                                  _buildModeCard(CalendarMode.hebrew, size),
                                 ],
                               ),
                       ),
@@ -202,8 +193,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                       child: Text(
                         'You can change this later in settings.',
                         style: TextStyle(
-                          color:
-                              const Color(0xFFF5F0E8).withAlpha(50),
+                          color: const Color(0xFFF5F0E8).withAlpha(50),
                           fontSize: 12,
                           letterSpacing: 1.0,
                         ),
@@ -219,9 +209,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
               AnimatedOpacity(
                 opacity: 1.0,
                 duration: const Duration(milliseconds: 1000),
-                child: Container(
-                  color: Colors.black.withAlpha(0),
-                ),
+                child: Container(color: Colors.black.withAlpha(0)),
               ),
           ],
         ),
@@ -231,8 +219,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
 
   Widget _buildModeCard(CalendarMode mode, Size screenSize) {
     final isSelected = _selectedMode == mode;
-    final isOther =
-        _selectedMode != null && _selectedMode != mode;
+    final isOther = _selectedMode != null && _selectedMode != mode;
     final isHovered = _hoveredMode == mode;
     final isLandscape = screenSize.width > screenSize.height;
 
@@ -248,8 +235,8 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
         scale: isSelected
             ? 1.05
             : isOther
-                ? 0.9
-                : 1.0,
+            ? 0.9
+            : 1.0,
         duration: const Duration(milliseconds: 400),
         child: MouseRegion(
           onEnter: (_) => setState(() => _hoveredMode = mode),
@@ -259,8 +246,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
             child: AnimatedBuilder(
               animation: _glowController,
               builder: (context, child) {
-                final glowIntensity =
-                    isHovered || isSelected ? 1.0 : 0.4;
+                final glowIntensity = isHovered || isSelected ? 1.0 : 0.4;
                 final glowValue = _glowController.value;
 
                 final borderColor = mode == CalendarMode.hebrew
@@ -274,8 +260,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: borderColor.withAlpha(
-                        (60 + glowValue * 40 * glowIntensity)
-                            .toInt(),
+                        (60 + glowValue * 40 * glowIntensity).toInt(),
                       ),
                       width: isSelected ? 2.0 : 1.0,
                     ),
@@ -284,23 +269,18 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                       end: Alignment.bottomRight,
                       colors: mode == CalendarMode.hebrew
                           ? [
-                              const Color(0xFF0D0D1A)
-                                  .withAlpha(200),
-                              const Color(0xFF1A1530)
-                                  .withAlpha(180),
+                              const Color(0xFF0D0D1A).withAlpha(200),
+                              const Color(0xFF1A1530).withAlpha(180),
                             ]
                           : [
-                              const Color(0xFF0A0A14)
-                                  .withAlpha(200),
-                              const Color(0xFF141420)
-                                  .withAlpha(180),
+                              const Color(0xFF0A0A14).withAlpha(200),
+                              const Color(0xFF141420).withAlpha(180),
                             ],
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: borderColor.withAlpha(
-                          (15 + glowValue * 25 * glowIntensity)
-                              .toInt(),
+                          (15 + glowValue * 25 * glowIntensity).toInt(),
                         ),
                         blurRadius: 20 + glowValue * 10,
                         spreadRadius: glowValue * 3,
@@ -312,15 +292,17 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Icon
-                      _buildModeIcon(mode, borderColor,
-                          glowIntensity, glowValue),
+                      _buildModeIcon(
+                        mode,
+                        borderColor,
+                        glowIntensity,
+                        glowValue,
+                      ),
                       const SizedBox(height: 20),
 
                       // Title
                       Text(
-                        mode == CalendarMode.hebrew
-                            ? 'HEBREW'
-                            : 'WESTERN',
+                        mode == CalendarMode.hebrew ? 'HEBREW' : 'WESTERN',
                         style: TextStyle(
                           color: borderColor,
                           fontSize: 18,
@@ -353,8 +335,7 @@ class _CalendarChoiceScreenState extends State<CalendarChoiceScreen>
                             : 'Standard schedule · Modern structures',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: const Color(0xFFF5F0E8)
-                              .withAlpha(60),
+                          color: const Color(0xFFF5F0E8).withAlpha(60),
                           fontSize: 11,
                           height: 1.4,
                           letterSpacing: 0.5,
@@ -451,10 +432,7 @@ class _ChoiceParticlePainter extends CustomPainter {
   final CalendarMode? selectedMode;
   final Random _random = Random(314);
 
-  _ChoiceParticlePainter({
-    required this.progress,
-    this.selectedMode,
-  });
+  _ChoiceParticlePainter({required this.progress, this.selectedMode});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -466,20 +444,15 @@ class _ChoiceParticlePainter extends CustomPainter {
       final particleSize = 0.8 + _random.nextDouble() * 2.0;
 
       // Floating motion
-      final offsetX =
-          sin((progress * 2 * pi) + i * 0.4) * 12;
-      final offsetY =
-          cos((progress * 2 * pi) + i * 0.3) * 18;
+      final offsetX = sin((progress * 2 * pi) + i * 0.4) * 12;
+      final offsetY = cos((progress * 2 * pi) + i * 0.3) * 18;
 
       final x = (baseX + offsetX) % size.width;
       final y = (baseY + offsetY) % size.height;
 
       // Twinkle
-      final twinkle =
-          (sin(progress * 2 * pi * 2 + i) + 1) / 2;
-      final alpha = (0.1 * 255 * (0.3 + twinkle * 0.7))
-          .toInt()
-          .clamp(0, 255);
+      final twinkle = (sin(progress * 2 * pi * 2 + i) + 1) / 2;
+      final alpha = (0.1 * 255 * (0.3 + twinkle * 0.7)).toInt().clamp(0, 255);
 
       // Color based on selection
       final isGold = i % 4 == 0;
@@ -499,7 +472,6 @@ class _ChoiceParticlePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChoiceParticlePainter old) {
-    return old.progress != progress ||
-        old.selectedMode != selectedMode;
+    return old.progress != progress || old.selectedMode != selectedMode;
   }
 }

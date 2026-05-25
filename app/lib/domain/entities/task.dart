@@ -61,10 +61,7 @@ class Task {
 
   /// Marks task as completed
   Task complete() {
-    return copyWith(
-      status: TaskStatus.completed,
-      completedAt: DateTime.now(),
-    );
+    return copyWith(status: TaskStatus.completed, completedAt: DateTime.now());
   }
 
   @override
