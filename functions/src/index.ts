@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -111,6 +112,10 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        // 🛡️ Sentinel: Add authentication to prevent unauthorized API usage
+        const auth = await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse);
+        if (!auth) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -167,6 +172,10 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        // 🛡️ Sentinel: Add authentication to prevent unauthorized API usage
+        const auth = await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse);
+        if (!auth) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
