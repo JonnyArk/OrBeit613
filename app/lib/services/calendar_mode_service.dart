@@ -27,7 +27,7 @@ class CalendarModeService extends ChangeNotifier {
   bool _initialized = false;
 
   CalendarModeService({required SecureStorageService storage})
-      : _storage = storage;
+    : _storage = storage;
 
   // ── Getters ──────────────────────────────────────────────
 
@@ -111,13 +111,13 @@ class CalendarModeService extends ChangeNotifier {
 
     // Hebrew day names (Yom Rishon through Shabbat)
     const hebrewDays = [
-      'Yom Sheni',    // Monday
-      'Yom Shlishi',  // Tuesday
-      'Yom Revi\'i',  // Wednesday
+      'Yom Sheni', // Monday
+      'Yom Shlishi', // Tuesday
+      'Yom Revi\'i', // Wednesday
       'Yom Chamishi', // Thursday
-      'Yom Shishi',   // Friday
-      'Shabbat',      // Saturday
-      'Yom Rishon',   // Sunday
+      'Yom Shishi', // Friday
+      'Shabbat', // Saturday
+      'Yom Rishon', // Sunday
     ];
 
     final dayName = hebrewDays[weekday - 1];
@@ -140,24 +140,24 @@ class CalendarModeService extends ChangeNotifier {
 
     if (isShabbatActive) {
       return const HebrewTint(
-        backgroundPrimary: Color(0xFF0D0D1A),   // Deep Shabbat blue
-        backgroundSecondary: Color(0xFF141428),  // Slightly lighter
-        accentGold: Color(0xFFE5C06B),           // Warm candle gold
-        textPrimary: Color(0xFFF0E8D8),          // Warm parchment
-        textSecondary: Color(0xFF8B7D6B),        // Muted earth
-        particleColor: Color(0xFFE5C06B),        // Candlelight particles
-        shimmerIntensity: 0.3,                   // Subdued — rest mode
+        backgroundPrimary: Color(0xFF0D0D1A), // Deep Shabbat blue
+        backgroundSecondary: Color(0xFF141428), // Slightly lighter
+        accentGold: Color(0xFFE5C06B), // Warm candle gold
+        textPrimary: Color(0xFFF0E8D8), // Warm parchment
+        textSecondary: Color(0xFF8B7D6B), // Muted earth
+        particleColor: Color(0xFFE5C06B), // Candlelight particles
+        shimmerIntensity: 0.3, // Subdued — rest mode
       );
     }
 
     return const HebrewTint(
-      backgroundPrimary: Color(0xFF12101E),    // Desert night
-      backgroundSecondary: Color(0xFF1E1A30),  // Warm deep purple
-      accentGold: Color(0xFFD4AF37),           // Sovereign gold
-      textPrimary: Color(0xFFF5EDD8),          // Sandstone parchment
-      textSecondary: Color(0xFFA09070),         // Desert sand
-      particleColor: Color(0xFFD4AF37),         // Gold dust
-      shimmerIntensity: 0.6,                    // Active glow
+      backgroundPrimary: Color(0xFF12101E), // Desert night
+      backgroundSecondary: Color(0xFF1E1A30), // Warm deep purple
+      accentGold: Color(0xFFD4AF37), // Sovereign gold
+      textPrimary: Color(0xFFF5EDD8), // Sandstone parchment
+      textSecondary: Color(0xFFA09070), // Desert sand
+      particleColor: Color(0xFFD4AF37), // Gold dust
+      shimmerIntensity: 0.6, // Active glow
     );
   }
 }

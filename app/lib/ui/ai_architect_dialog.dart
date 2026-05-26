@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/ai_service_provider.dart';
@@ -14,11 +13,12 @@ class AIArchitectDialog extends ConsumerStatefulWidget {
   ConsumerState<AIArchitectDialog> createState() => _AIArchitectDialogState();
 }
 
-class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with SingleTickerProviderStateMixin {
+class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _promptController = TextEditingController();
   final _contextController = TextEditingController();
-  
+
   bool _isLoading = false;
   String? _statusMessage;
   String? _resultData;
@@ -39,33 +39,35 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
 
   Future<void> _generateAsset() async {
     if (_promptController.text.isEmpty) return;
-    
+
     _setLoading('Summoning the Architect...');
     try {
       final aiService = ref.read(aiServiceProvider);
       final buildingRepo = ref.read(buildingRepositoryProvider);
-      
+
       final request = AssetGenerationRequest(
         assetType: 'building',
         context: _promptController.text,
         size: 'medium',
       );
-      
+
       // 1. Generate the asset
       final response = await aiService.generateAsset(request);
-      
+
       // 2. Calculate position (next available spot diagonal)
       final existing = await buildingRepo.getAllBuildings();
       final offset = existing.length * 60.0;
-      
+
       // 3. Persist to World Database
       await buildingRepo.createBuilding(
         type: 'ai_generated',
-        x: 200.0 + offset, 
+        x: 200.0 + offset,
         y: 200.0 + (offset * 0.5), // Isometric slope
       );
 
-      _setSuccess('Manifested! Credits: ${response.creditsUsed}\nAsset placed in sovereign space.');
+      _setSuccess(
+        'Manifested! Credits: ${response.creditsUsed}\nAsset placed in sovereign space.',
+      );
     } catch (e) {
       _setError(e);
     }
@@ -84,7 +86,7 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
       );
 
       final response = await aiService.distillContext(request);
-      
+
       // Persist distilled event to database
       final lifeEventRepo = ref.read(lifeEventRepositoryProvider);
       await lifeEventRepo.createEvent(
@@ -93,19 +95,25 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
         description: response.description,
         occurredAt: DateTime.now(),
       );
-      
-      _setSuccess('Distilled & Saved: ${response.title}\nCategory: ${response.category}\nEntities: ${response.entities.length}');
+
+      _setSuccess(
+        'Distilled & Saved: ${response.title}\nCategory: ${response.category}\nEntities: ${response.entities.length}',
+      );
     } catch (e) {
       _setError(e);
     }
   }
-  
+
   LifeEventType _mapCategoryToType(String category) {
     switch (category.toLowerCase()) {
-      case 'purchase': return LifeEventType.purchase;
-      case 'appointment': return LifeEventType.appointment;
-      case 'milestone': return LifeEventType.milestone;
-      default: return LifeEventType.memory;
+      case 'purchase':
+        return LifeEventType.purchase;
+      case 'appointment':
+        return LifeEventType.appointment;
+      case 'milestone':
+        return LifeEventType.milestone;
+      default:
+        return LifeEventType.memory;
     }
   }
 
@@ -163,10 +171,7 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
         height: 350,
         child: TabBarView(
           controller: _tabController,
-          children: [
-            _buildArchitectTab(),
-            _buildScribeTab(),
-          ],
+          children: [_buildArchitectTab(), _buildScribeTab()],
         ),
       ),
     );
@@ -227,7 +232,9 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _resultData != null ? Colors.green.withAlpha(50) : const Color(0xFF134E5E).withAlpha(100),
+              color: _resultData != null
+                  ? Colors.green.withAlpha(50)
+                  : const Color(0xFF134E5E).withAlpha(100),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Column(
@@ -235,7 +242,11 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
               children: [
                 Text(
                   _statusMessage!,
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 if (_resultData != null)
                   Text(
@@ -248,14 +259,19 @@ class _AIArchitectDialogState extends ConsumerState<AIArchitectDialog> with Sing
           const SizedBox(height: 16),
         ],
         if (_isLoading)
-          const Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)))
+          const Center(
+            child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+          )
         else
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close', style: TextStyle(color: Colors.white54)),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: Colors.white54),
+                ),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(

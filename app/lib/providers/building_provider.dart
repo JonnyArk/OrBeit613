@@ -28,7 +28,7 @@ final selectedBuildingIdProvider = StateProvider<int?>((ref) => null);
 final selectedBuildingProvider = FutureProvider<Building?>((ref) async {
   final selectedId = ref.watch(selectedBuildingIdProvider);
   if (selectedId == null) return null;
-  
+
   final repo = ref.watch(buildingRepositoryProvider);
   return repo.getBuildingById(selectedId);
 });
