@@ -126,20 +126,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       case _OnboardingStage.theVoid:
         return [Colors.black, Colors.black];
       case _OnboardingStage.theFoundation:
-        return [
-          const Color(0xFF050510),
-          const Color(0xFF0A0A1A),
-        ];
+        return [const Color(0xFF050510), const Color(0xFF0A0A1A)];
       case _OnboardingStage.theCalendar:
-        return [
-          const Color(0xFF080818),
-          const Color(0xFF0E0E1E),
-        ];
+        return [const Color(0xFF080818), const Color(0xFF0E0E1E)];
       case _OnboardingStage.theLight:
-        return [
-          const Color(0xFF0A0A12),
-          const Color(0xFF1A1A2E),
-        ];
+        return [const Color(0xFF0A0A12), const Color(0xFF1A1A2E)];
     }
   }
 
@@ -274,10 +265,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           children: [
             // Shield icon
             const Icon(
-              Icons.shield_outlined,
-              size: 56,
-              color: Color(0xFFD4AF37),
-            )
+                  Icons.shield_outlined,
+                  size: 56,
+                  color: Color(0xFFD4AF37),
+                )
                 .animate()
                 .fadeIn(duration: 600.ms)
                 .scaleXY(begin: 0.5, end: 1.0, duration: 600.ms),
@@ -320,16 +311,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                     letterSpacing: 1.5,
                   ),
                   enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFFD4AF37),
-                      width: 1,
-                    ),
+                    borderSide: BorderSide(color: Color(0xFFD4AF37), width: 1),
                   ),
                   focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFFD4AF37),
-                      width: 2,
-                    ),
+                    borderSide: BorderSide(color: Color(0xFFD4AF37), width: 2),
                   ),
                 ),
               ),
@@ -414,33 +399,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           // Building icon (materializing)
           if (_showBuildingBurst)
             Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFD4AF37),
-                    const Color(0xFFD4AF37).withAlpha(60),
-                    Colors.transparent,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFD4AF37).withAlpha(80),
-                    blurRadius: 40,
-                    spreadRadius: 15,
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFFD4AF37),
+                        const Color(0xFFD4AF37).withAlpha(60),
+                        Colors.transparent,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD4AF37).withAlpha(80),
+                        blurRadius: 40,
+                        spreadRadius: 15,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.home_work_rounded,
-                size: 48,
-                color: Color(0xFF1A1A2E),
-              ),
-            )
+                  child: const Icon(
+                    Icons.home_work_rounded,
+                    size: 48,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                )
                 .animate()
-                .scaleXY(begin: 0.0, end: 1.0, duration: 800.ms, curve: Curves.elasticOut)
+                .scaleXY(
+                  begin: 0.0,
+                  end: 1.0,
+                  duration: 800.ms,
+                  curve: Curves.elasticOut,
+                )
                 .fadeIn(duration: 400.ms),
 
           const SizedBox(height: 48),
@@ -448,16 +438,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           // "Let there be light."
           if (_showLetThereBeLight)
             const Text(
-              'Let there be light.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFFF5F0E8),
-                fontSize: 26,
-                fontWeight: FontWeight.w300,
-                letterSpacing: 1.5,
-                fontStyle: FontStyle.italic,
-              ),
-            )
+                  'Let there be light.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFF5F0E8),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 1.5,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
                 .animate()
                 .fadeIn(duration: 1200.ms)
                 .then(delay: 2000.ms)
@@ -467,7 +457,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
           if (_showLetThereBeLight)
             Text(
-              _nameController.text.isEmpty ? 'Your Sanctum' : _nameController.text,
+              _nameController.text.isEmpty
+                  ? 'Your Sanctum'
+                  : _nameController.text,
               style: TextStyle(
                 color: const Color(0xFFD4AF37).withAlpha(180),
                 fontSize: 14,
@@ -530,11 +522,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     try {
       // Create the first building
       final buildingRepo = ref.read(buildingRepositoryProvider);
-      await buildingRepo.createBuilding(
-        type: 'farmhouse_base',
-        x: 10,
-        y: 10,
-      );
+      await buildingRepo.createBuilding(type: 'farmhouse_base', x: 10, y: 10);
 
       // If Hebrew mode: spawn the Tabernacle at the world's heart
       if (_selectedCalendarMode == CalendarMode.hebrew) {
@@ -575,8 +563,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 const GameScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+                  return FadeTransition(opacity: animation, child: child);
+                },
             transitionDuration: const Duration(milliseconds: 1200),
           ),
         );
@@ -648,7 +636,8 @@ class _ParticlePainter extends CustomPainter {
 
       // Gentle floating motion
       final offsetX = sin((progress * 2 * pi) + i * 0.5) * 15;
-      final offsetY = cos((progress * 2 * pi) + i * 0.3) * 20 -
+      final offsetY =
+          cos((progress * 2 * pi) + i * 0.3) * 20 -
           (progress * speed * size.height * 0.3);
 
       final x = (baseX + offsetX) % size.width;
@@ -656,7 +645,10 @@ class _ParticlePainter extends CustomPainter {
 
       // Twinkle effect
       final twinkle = (sin(progress * 2 * pi * 3 + i) + 1) / 2;
-      final alpha = (brightness * 255 * (0.3 + twinkle * 0.7)).toInt().clamp(0, 255);
+      final alpha = (brightness * 255 * (0.3 + twinkle * 0.7)).toInt().clamp(
+        0,
+        255,
+      );
 
       // Gold-ish color with varying warmth
       final isGold = i % 3 == 0;

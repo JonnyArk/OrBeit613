@@ -51,8 +51,8 @@ class AIServiceImpl implements AIService {
   /// Defaults to the production Firebase Functions instance.
   /// Pass a custom instance for testing or emulator use.
   AIServiceImpl({FirebaseFunctions? functions})
-      : _functions = functions ??
-            FirebaseFunctions.instanceFor(region: 'us-central1');
+    : _functions =
+          functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
 
   @override
   Future<AssetGenerationResponse> generateAsset(
@@ -65,8 +65,9 @@ class AIServiceImpl implements AIService {
       timeout: _generateAssetTimeout,
       action: () async {
         final callable = _functions.httpsCallable('generateAsset');
-        final result =
-            await callable.call<Map<String, dynamic>>(request.toJson());
+        final result = await callable.call<Map<String, dynamic>>(
+          request.toJson(),
+        );
 
         final data = result.data;
         if (data['success'] != true) {
@@ -95,8 +96,9 @@ class AIServiceImpl implements AIService {
       timeout: _distillTimeout,
       action: () async {
         final callable = _functions.httpsCallable('distillContext');
-        final result =
-            await callable.call<Map<String, dynamic>>(request.toJson());
+        final result = await callable.call<Map<String, dynamic>>(
+          request.toJson(),
+        );
 
         final data = result.data;
         if (data['success'] != true) {
@@ -107,9 +109,7 @@ class AIServiceImpl implements AIService {
           );
         }
 
-        return LifeEventResponse.fromJson(
-          data['data'] as Map<String, dynamic>,
-        );
+        return LifeEventResponse.fromJson(data['data'] as Map<String, dynamic>);
       },
     );
   }
@@ -189,8 +189,9 @@ class AIServiceImpl implements AIService {
   /// Checks if device is online, throws OfflineException if not
   Future<void> _checkConnectivity() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 3));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 3));
       if (result.isEmpty || result[0].rawAddress.isEmpty) {
         throw const OfflineException();
       }
@@ -281,8 +282,9 @@ class AIServiceImpl implements AIService {
 
   Future<bool> _isOnline() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 2));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 2));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
       return false;

@@ -24,7 +24,8 @@ import 'environment_decorations.dart';
 import '../domain/repositories/building_repository.dart';
 
 /// Main game instance for the OrBeit world
-class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionDetection {
+class WorldGame extends FlameGame
+    with PanDetector, ScaleDetector, HasCollisionDetection {
   /// Repository for loading and saving buildings
   final BuildingRepository buildingRepository;
 
@@ -59,11 +60,7 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
     add(_cam);
 
     // 1. Generate terrain
-    terrainData = WorldTerrainData(
-      columns: 20,
-      rows: 20,
-      seed: 42,
-    );
+    terrainData = WorldTerrainData(columns: 20, rows: 20, seed: 42);
 
     // 2. Add the terrain grid renderer (priority: 0 = back)
     final grid = IsometricGrid(terrainData: terrainData);
@@ -87,9 +84,9 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
     _world.add(lighthouse);
 
     // 5. Subscribe to building updates
-    _buildingSubscription = buildingRepository
-        .watchAllBuildings()
-        .listen(_syncBuildings);
+    _buildingSubscription = buildingRepository.watchAllBuildings().listen(
+      _syncBuildings,
+    );
 
     // 6. Center camera on the world center
     // Iso center for tile (10,10): x = (10-10)*32 = 0, y = (10+10)*16 = 320
@@ -109,7 +106,10 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
 
   @override
   void onScaleUpdate(ScaleUpdateInfo info) {
-    final newZoom = (_cam.viewfinder.zoom * info.scale.global.y).clamp(0.4, 3.0);
+    final newZoom = (_cam.viewfinder.zoom * info.scale.global.y).clamp(
+      0.4,
+      3.0,
+    );
     _cam.viewfinder.zoom = newZoom;
   }
 
@@ -121,7 +121,9 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
 
   /// Syncs the game components with the latest database state
   void _syncBuildings(List<Building> buildings) {
-    final currentComponents = _world.children.whereType<BuildingComponent>().toList();
+    final currentComponents = _world.children
+        .whereType<BuildingComponent>()
+        .toList();
     final currentIds = currentComponents.map((c) => c.building.id).toSet();
     final newIds = buildings.map((b) => b.id).toSet();
 
@@ -144,7 +146,8 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
 
   /// Adds a new building component to the game manually
   void addBuilding(BuildingComponent component) {
-    component.priority = 50 + component.building.x.toInt() + component.building.y.toInt();
+    component.priority =
+        50 + component.building.x.toInt() + component.building.y.toInt();
     _world.add(component);
   }
 
@@ -160,7 +163,8 @@ class WorldGame extends FlameGame with PanDetector, ScaleDetector, HasCollisionD
 // ════════════════════════════════════════════════════════════
 
 /// HUD elements rendered on top of the camera viewport
-class HudOverlayComponent extends PositionComponent with HasGameReference<WorldGame> {
+class HudOverlayComponent extends PositionComponent
+    with HasGameReference<WorldGame> {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
@@ -179,14 +183,21 @@ class HudOverlayComponent extends PositionComponent with HasGameReference<WorldG
           fontWeight: FontWeight.bold,
           fontFamily: 'Roboto',
           shadows: [
-            Shadow(blurRadius: 6, color: Color(0xAA000000), offset: Offset(1, 1)),
+            Shadow(
+              blurRadius: 6,
+              color: Color(0xAA000000),
+              offset: Offset(1, 1),
+            ),
           ],
         ),
       ),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    textPainter.paint(canvas, Offset(gameSize.x / 2 - textPainter.width / 2, 16));
+    textPainter.paint(
+      canvas,
+      Offset(gameSize.x / 2 - textPainter.width / 2, 16),
+    );
   }
 
   void _renderFulfillmentBar(Canvas canvas) {
@@ -198,13 +209,25 @@ class HudOverlayComponent extends PositionComponent with HasGameReference<WorldG
 
     // Background track
     canvas.drawRRect(
-      RRect.fromLTRBR(barX, barY, barX + barWidth, barY + barHeight, const Radius.circular(4)),
+      RRect.fromLTRBR(
+        barX,
+        barY,
+        barX + barWidth,
+        barY + barHeight,
+        const Radius.circular(4),
+      ),
       Paint()..color = const Color(0x44FFFFFF),
     );
 
     // Fill (placeholder 35%)
     canvas.drawRRect(
-      RRect.fromLTRBR(barX, barY, barX + barWidth * 0.35, barY + barHeight, const Radius.circular(4)),
+      RRect.fromLTRBR(
+        barX,
+        barY,
+        barX + barWidth * 0.35,
+        barY + barHeight,
+        const Radius.circular(4),
+      ),
       Paint()..color = const Color(0xFFD4AF37),
     );
 
@@ -222,7 +245,10 @@ class HudOverlayComponent extends PositionComponent with HasGameReference<WorldG
       textDirection: TextDirection.ltr,
     );
     labelPainter.layout();
-    labelPainter.paint(canvas, Offset(gameSize.x / 2 - labelPainter.width / 2, barY - 16));
+    labelPainter.paint(
+      canvas,
+      Offset(gameSize.x / 2 - labelPainter.width / 2, barY - 16),
+    );
   }
 }
 
@@ -240,10 +266,7 @@ class OrLighthouseComponent extends PositionComponent {
   double _pulsePhase = 0.0;
   double _beamAngle = 0.0;
 
-  OrLighthouseComponent({
-    required this.gridCol,
-    required this.gridRow,
-  });
+  OrLighthouseComponent({required this.gridCol, required this.gridRow});
 
   @override
   Future<void> onLoad() async {
@@ -271,7 +294,11 @@ class OrLighthouseComponent extends PositionComponent {
 
     // ── Ground shadow ──
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(centerX, baseY + 5), width: 50, height: 14),
+      Rect.fromCenter(
+        center: Offset(centerX, baseY + 5),
+        width: 50,
+        height: 14,
+      ),
       Paint()
         ..color = const Color(0x33000000)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
@@ -330,14 +357,17 @@ class OrLighthouseComponent extends PositionComponent {
       Offset(centerX, lampY),
       8,
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            Colors.white,
-            const Color(0xFF4FD1C5),
-            const Color(0xFF26A69A),
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ).createShader(Rect.fromCircle(center: Offset(centerX, lampY), radius: 8)),
+        ..shader =
+            RadialGradient(
+              colors: [
+                Colors.white,
+                const Color(0xFF4FD1C5),
+                const Color(0xFF26A69A),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ).createShader(
+              Rect.fromCircle(center: Offset(centerX, lampY), radius: 8),
+            ),
     );
 
     // ── Orbital rings ──
@@ -372,24 +402,37 @@ class OrLighthouseComponent extends PositionComponent {
     canvas.drawPath(
       beamPath,
       Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.fromARGB((50 + pulse * 30).toInt(), 79, 209, 197),
-            const Color(0x004FD1C5),
-          ],
-        ).createShader(Rect.fromLTWH(centerX - 22, lampY, 44, baseY - lampY + 10)),
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color.fromARGB((50 + pulse * 30).toInt(), 79, 209, 197),
+                const Color(0x004FD1C5),
+              ],
+            ).createShader(
+              Rect.fromLTWH(centerX - 22, lampY, 44, baseY - lampY + 10),
+            ),
     );
   }
 
-  void _drawOrbitalRing(Canvas canvas, double cx, double cy, double radius, double angle) {
+  void _drawOrbitalRing(
+    Canvas canvas,
+    double cx,
+    double cy,
+    double radius,
+    double angle,
+  ) {
     canvas.save();
     canvas.translate(cx, cy);
     canvas.rotate(angle);
 
     canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: radius * 2, height: radius * 0.6),
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: radius * 2,
+        height: radius * 0.6,
+      ),
       Paint()
         ..style = PaintingStyle.stroke
         ..color = const Color(0x66D4AF37)
