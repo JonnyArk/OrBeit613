@@ -511,7 +511,9 @@ export class FlowService {
      */
     private generateTitle(rawData: string, _category: LifeEventCategory): string {
         // Get first sentence or first 50 chars
-        const firstSentence = rawData.split(/[.!?]/)[0] || rawData;
+        // ⚡ Bolt: Use search instead of split to prevent allocating an array for the entire string
+        const matchIndex = rawData.search(/[.!?]/);
+        const firstSentence = matchIndex !== -1 && matchIndex !== 0 ? rawData.substring(0, matchIndex) : rawData;
         const title = firstSentence.substring(0, 50).trim();
 
         if (title.length < rawData.length) {
