@@ -14,6 +14,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 
 // AI Services
 import {
@@ -76,7 +77,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    const isAuth = await requireAuth(
+        request as unknown as TypedRequest,
+        response as unknown as TypedResponse
+    );
+    if (!isAuth) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -111,6 +118,12 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const isAuth = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!isAuth) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -143,11 +156,9 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
@@ -167,6 +178,12 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const isAuth = await requireAuth(
+            request as unknown as TypedRequest,
+            response as unknown as TypedResponse
+        );
+        if (!isAuth) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -200,11 +217,9 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
