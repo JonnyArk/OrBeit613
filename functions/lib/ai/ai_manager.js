@@ -181,16 +181,15 @@ class AIManager {
         try {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            // ⚡ Bolt: Prefer server-side aggregation over client-side iteration to significantly reduce document reads, memory footprint, and network bandwidth.
             const snapshot = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
+                .aggregate({
+                total: firestore_1.AggregateField.sum("creditsUsed"),
+            })
                 .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+            return snapshot.data().total || 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });
