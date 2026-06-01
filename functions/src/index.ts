@@ -16,6 +16,8 @@ import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
 // AI Services
+import { requireAuth } from "./auth";
+
 import {
     getAIManager,
     getWhiskService,
@@ -111,6 +113,9 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const uid = await requireAuth(request, response);
+        if (!uid) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -167,6 +172,9 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        const uid = await requireAuth(request, response);
+        if (!uid) return;
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
