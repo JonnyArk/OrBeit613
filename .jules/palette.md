@@ -1,0 +1,3 @@
+## 2026-06-01 - Use IconButton instead of GestureDetector for icon-only buttons
+**Learning:** In Flutter, replacing a `GestureDetector` wrapping an `Icon` with an `IconButton` significantly improves UX and accessibility. `IconButton` natively handles tap ripples, focus indicators for keyboard navigation, and its `tooltip` property automatically provides both visual hover context and a screen reader semantic label.
+**Action:** Always prefer `IconButton` (adjusting `padding` and `constraints` if necessary) over `GestureDetector` for icon-only interactive elements to ensure built-in semantic and visual feedback.
