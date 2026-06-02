@@ -14,6 +14,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { requireAuth, type TypedRequest, type TypedResponse } from "./auth";
 
 // AI Services
 import {
@@ -76,7 +77,15 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    if (!(await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse))) return;
+
+    // Allow CORS preflight requests
+    if (request.method === "OPTIONS") {
+        response.status(204).send("");
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -111,6 +120,14 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        if (!(await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse))) return;
+
+        // Allow CORS preflight requests
+        if (request.method === "OPTIONS") {
+            response.status(204).send("");
+            return;
+        }
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -167,6 +184,14 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        if (!(await requireAuth(request as unknown as TypedRequest, response as unknown as TypedResponse))) return;
+
+        // Allow CORS preflight requests
+        if (request.method === "OPTIONS") {
+            response.status(204).send("");
+            return;
+        }
+
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
