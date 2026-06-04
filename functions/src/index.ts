@@ -143,11 +143,9 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
@@ -200,11 +198,9 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An internal error occurred",
             });
         }
     }
