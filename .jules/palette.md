@@ -1,0 +1,3 @@
+## 2025-02-05 - Add accessibility label to task completion button
+**Learning:** Replaced a custom `GestureDetector` wrapped `Icon` with an `IconButton` in the task list panel. Setting a `tooltip` on the `IconButton` provides essential screen reader semantic labels, and using `IconButton` adds native Material interaction feedback (ripple on tap and focus states) without needing explicit Semantics widgets. To avoid layout shifts from default minimum sizes, explicitly setting `constraints: const BoxConstraints()` is necessary.
+**Action:** Always prefer `IconButton` over `GestureDetector` for icon-only buttons to get automatic semantics and feedback, applying `BoxConstraints` to match original sizes when refactoring.
