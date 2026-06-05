@@ -181,16 +181,15 @@ class AIManager {
         try {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            // ⚡ Bolt: Server-side aggregation replaces client-side O(N) iteration
+            // 🎯 Why: Prevents downloading thousands of documents into memory just to sum a single field
+            // 📊 Impact: O(1) memory footprint and minimal network transfer vs O(N) previously
             const snapshot = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
+                .aggregate({ total: firestore_1.AggregateField.sum("creditsUsed") })
                 .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+            return snapshot.data().total || 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });
