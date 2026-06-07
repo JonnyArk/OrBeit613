@@ -9,7 +9,7 @@
  * Manages 25,000 monthly AI credits for Flow and Whisk services.
  */
 
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, AggregateField } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 
 /** Monthly credit allocation from Google AI Ultra plan */
@@ -185,18 +185,13 @@ export class AIManager {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-            const snapshot = await this.db
+            const aggregateQuery = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
+                .aggregate({ total: AggregateField.sum("creditsUsed") })
                 .get();
 
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data() as CreditUsageEntry;
-                total += data.creditsUsed || 0;
-            });
-
-            return total;
+            return aggregateQuery.data().total || 0;
         } catch (error) {
             logger.error("Failed to get monthly usage", { error });
             return 0;
