@@ -42,6 +42,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
@@ -49,8 +52,12 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+const cors_1 = __importDefault(require("cors"));
+// Authentication
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
+const corsHandler = (0, cors_1.default)({ origin: true });
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -127,41 +134,44 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
-exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.assetType || !body.context) {
-            response.status(400).json({
-                error: "Missing required fields: assetType and context",
-            });
+exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, (request, response) => {
+    corsHandler(request, response, async () => {
+        // Only allow POST
+        if (request.method !== "POST") {
+            response.status(405).json({ error: "Method not allowed" });
             return;
         }
-        logger.info("Asset generation request received", {
-            assetType: body.assetType,
-            size: body.size || "medium",
-        });
-        const whiskService = (0, ai_1.getWhiskService)();
-        const result = await whiskService.generateAsset(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        try {
+            await (0, auth_1.requireAuth)(request);
+            const body = request.body;
+            // Validate required fields
+            if (!body.assetType || !body.context) {
+                response.status(400).json({
+                    error: "Missing required fields: assetType and context",
+                });
+                return;
+            }
+            logger.info("Asset generation request received", {
+                assetType: body.assetType,
+                size: body.size || "medium",
+            });
+            const whiskService = (0, ai_1.getWhiskService)();
+            const result = await whiskService.generateAsset(body);
+            response.json({
+                success: true,
+                data: result,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Asset generation failed", { error });
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            response.status(500).json({
+                success: false,
+                error: errorMessage,
+            });
+        }
+    });
 });
 /**
  * Distill raw context into structured Life Event using Flow service.
@@ -174,41 +184,44 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
-exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.rawData || !body.dataType) {
-            response.status(400).json({
-                error: "Missing required fields: rawData and dataType",
-            });
+exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, (request, response) => {
+    corsHandler(request, response, async () => {
+        // Only allow POST
+        if (request.method !== "POST") {
+            response.status(405).json({ error: "Method not allowed" });
             return;
         }
-        logger.info("Context distillation request received", {
-            dataType: body.dataType,
-            complexity: body.complexity || "standard",
-            inputLength: body.rawData.length,
-        });
-        const flowService = (0, ai_1.getFlowService)();
-        const result = await flowService.distillContext(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Context distillation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        try {
+            await (0, auth_1.requireAuth)(request);
+            const body = request.body;
+            // Validate required fields
+            if (!body.rawData || !body.dataType) {
+                response.status(400).json({
+                    error: "Missing required fields: rawData and dataType",
+                });
+                return;
+            }
+            logger.info("Context distillation request received", {
+                dataType: body.dataType,
+                complexity: body.complexity || "standard",
+                inputLength: body.rawData.length,
+            });
+            const flowService = (0, ai_1.getFlowService)();
+            const result = await flowService.distillContext(body);
+            response.json({
+                success: true,
+                data: result,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Context distillation failed", { error });
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            response.status(500).json({
+                success: false,
+                error: errorMessage,
+            });
+        }
+    });
 });
 //# sourceMappingURL=index.js.map
