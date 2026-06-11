@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility for Icon-only Close Buttons
+**Learning:** In Flutter, wrapping an `Icon` with a `GestureDetector` creates an interactive element but completely lacks accessibility semantics (like an ARIA label equivalent), preventing screen readers from identifying its purpose and keyboard users from focusing it. We noticed this pattern was being used for a close button in a reminder banner.
+**Action:** Replace `GestureDetector` wraps around `Icon` widgets with the native `IconButton` widget, ensuring the `tooltip` property is set so that the accessible name is exposed. When needing tight spacing (which was the reason for `GestureDetector`), use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` on the `IconButton` instead.
