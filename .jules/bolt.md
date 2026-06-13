@@ -1,0 +1,3 @@
+## 2024-06-13 - Prevent hot path object instantiations in NLP pipelines
+**Learning:** The `FlowService` NLP pipelines instantiated new `Set`, `Array`, and `RegExp` objects inside `extractEntities`, `analyzeSentiment`, and `extractActionItems` during each context distillation. When analyzing high volumes of sensor data, these repetitive instantiations become a performance bottleneck due to excessive garbage collection and object initialization overhead. Also, when reusing global RegExps across function calls, `lastIndex` must be explicitly reset.
+**Action:** Extract static sets, arrays, and compiled RegExps to module-level constants. Always reset `lastIndex = 0` when reusing global RegExp patterns across multiple inputs.
