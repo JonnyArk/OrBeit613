@@ -1,0 +1,4 @@
+## 2025-06-13 - [Missing Authentication on Sensitive Endpoints]
+**Vulnerability:** The HTTP cloud functions (`generateAsset`, `distillContext`) process sensitive user data but completely lack authentication and authorization checks. Any user could trigger them and they operate without context of who is making the request.
+**Learning:** These endpoints are `onRequest` HTTP functions, which means they are publicly accessible by default unless an authorization layer is added inside the function. Firebase doesn't auto-secure `onRequest` functions the way it does `onCall` functions.
+**Prevention:** For `onRequest` functions in Firebase that serve client applications or process sensitive data, always implement an explicit `requireAuth` check inside the function body (e.g. using `cors` and checking the `Authorization` header with Firebase Admin).
