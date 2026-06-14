@@ -15,6 +15,11 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
+import cors = require("cors");
+import { requireAuth } from "./auth";
+
+const corsHandler = cors({ origin: true });
+
 // AI Services
 import {
     getAIManager,
@@ -111,13 +116,18 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        corsHandler(request, response, async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const uid = await requireAuth(request, response as any);
+            if (!uid) return;
 
-        try {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
+
+            try {
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -143,13 +153,14 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                response.status(500).json({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        });
     }
 );
 
@@ -167,13 +178,18 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        corsHandler(request, response, async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const uid = await requireAuth(request, response as any);
+            if (!uid) return;
 
-        try {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
+
+            try {
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -200,12 +216,13 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                response.status(500).json({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        });
     }
 );
