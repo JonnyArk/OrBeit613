@@ -44,13 +44,10 @@ class _ReminderBannerState extends State<ReminderBanner>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
 
     _subscription = widget.reminderStream.listen(_onReminder);
   }
@@ -161,12 +158,16 @@ class _ReminderBannerState extends State<ReminderBanner>
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: _dismiss,
-                  child: const Icon(
-                    Icons.close,
-                    color: Color(0xFF808080),
-                    size: 16,
+                Semantics(
+                  button: true,
+                  label: 'Dismiss reminder',
+                  child: GestureDetector(
+                    onTap: _dismiss,
+                    child: const Icon(
+                      Icons.close,
+                      color: Color(0xFF808080),
+                      size: 16,
+                    ),
                   ),
                 ),
               ],
