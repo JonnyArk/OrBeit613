@@ -1,0 +1,4 @@
+## 2025-06-16 - Add Authentication to AI Generation Endpoints
+**Vulnerability:** The AI generation and context distillation endpoints (`generateAsset` and `distillContext`) in `functions/src/index.ts` lack any form of authentication, exposing expensive underlying AI services to unauthenticated access and potential abuse.
+**Learning:** Functions that consume Google AI Ultra resources and perform significant computations were created as public `onRequest` endpoints without utilizing Firebase's authentication mechanisms, thereby allowing arbitrary clients to trigger them without incurring personal cost.
+**Prevention:** In the Firebase Cloud Functions backend, always combine a manual `requireAuth` check and a CORS wrapper for HTTP `onRequest` endpoints that perform privileged actions or consume expensive services, ensuring that requests from unauthorized origins and users are rejected before processing.
