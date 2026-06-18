@@ -1,0 +1,4 @@
+## 2024-06-18 - Securing Browser-Facing Firebase Functions
+**Vulnerability:** Missing authentication on `onRequest` endpoints exposing Google AI Ultra APIs to unauthorized access.
+**Learning:** When securing `onRequest` Firebase Cloud Functions that are accessed by browser clients, you cannot simply add a `requireAuth` check at the beginning of the function. Browser clients send CORS preflight `OPTIONS` requests before the actual POST request, and these preflight requests do not contain the `Authorization` header. If authentication is checked before CORS is handled, the preflight request fails with a 401 Unauthorized, breaking the integration.
+**Prevention:** Always wrap browser-facing `onRequest` endpoints with a CORS handler (e.g., `cors()`) and run the authentication check *inside* the CORS callback. This ensures preflight requests pass smoothly while still protecting the actual endpoint logic.
