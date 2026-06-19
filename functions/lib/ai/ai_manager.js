@@ -181,16 +181,12 @@ class AIManager {
         try {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const snapshot = await this.db
+            const aggregateQuery = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
+                .aggregate({ totalCreditsUsed: firestore_1.AggregateField.sum("creditsUsed") })
                 .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+            return aggregateQuery.data().totalCreditsUsed || 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });

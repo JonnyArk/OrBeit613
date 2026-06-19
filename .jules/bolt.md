@@ -1,0 +1,3 @@
+## 2024-06-19 - Server-side Aggregation for Firebase Data
+**Learning:** By default, calculating sums over a Firestore collection by retrieving all documents to the client and iterating through them can cause a severe N+1 memory and performance bottleneck as the collection grows. Server-side aggregation uses `.aggregate({ [alias]: AggregateField.sum('fieldName') })` which efficiently performs the calculation on the database side, saving bandwidth and local memory.
+**Action:** When calculating sums or averages across large Firestore collections in the functions/ backend, always import `AggregateField` from `firebase-admin/firestore` and use server-side aggregation rather than client-side iteration.
