@@ -68,6 +68,21 @@ const crypto_1 = __importDefault(require("crypto"));
  * });
  * console.log(result.event.category); // 'relationship'
  */
+const NAME_PATTERN = /\b([A-Z][a-z]+)\b/g;
+const COMMON_WORDS = new Set([
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+    "Saturday", "Sunday", "January", "February", "March",
+    "April", "May", "June", "July", "August", "September",
+    "October", "November", "December", "Today", "Tomorrow",
+]);
+const POSITIVE_WORDS = ["happy", "great", "wonderful", "amazing", "good", "love", "excited"];
+const NEGATIVE_WORDS = ["sad", "bad", "terrible", "awful", "hate", "angry", "frustrated"];
+const ACTION_PATTERNS = [
+    /need to\s+(.+?)(?:\.|$)/gi,
+    /should\s+(.+?)(?:\.|$)/gi,
+    /todo:\s*(.+?)(?:\.|$)/gi,
+    /reminder:\s*(.+?)(?:\.|$)/gi,
+];
 class FlowService {
     db;
     aiManager;
@@ -262,15 +277,9 @@ class FlowService {
         // Actual implementation will use NLP model
         const entities = [];
         // Simple name detection (capitalized words)
-        const namePattern = /\b([A-Z][a-z]+)\b/g;
-        const matches = rawData.match(namePattern) || [];
-        const commonWords = new Set([
-            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-            "Saturday", "Sunday", "January", "February", "March",
-            "April", "May", "June", "July", "August", "September",
-            "October", "November", "December", "Today", "Tomorrow",
-        ]);
-        const uniqueNames = [...new Set(matches)].filter((name) => !commonWords.has(name));
+        NAME_PATTERN.lastIndex = 0;
+        const matches = rawData.match(NAME_PATTERN) || [];
+        const uniqueNames = [...new Set(matches)].filter((name) => !COMMON_WORDS.has(name));
         uniqueNames.slice(0, 5).forEach((name, index) => {
             entities.push({
                 type: "person",
@@ -289,15 +298,13 @@ class FlowService {
     analyzeSentiment(rawData) {
         // Placeholder sentiment analysis
         const text = rawData.toLowerCase();
-        const positiveWords = ["happy", "great", "wonderful", "amazing", "good", "love", "excited"];
-        const negativeWords = ["sad", "bad", "terrible", "awful", "hate", "angry", "frustrated"];
         let positiveCount = 0;
         let negativeCount = 0;
-        positiveWords.forEach((word) => {
+        POSITIVE_WORDS.forEach((word) => {
             if (text.includes(word))
                 positiveCount++;
         });
-        negativeWords.forEach((word) => {
+        NEGATIVE_WORDS.forEach((word) => {
             if (text.includes(word))
                 negativeCount++;
         });
@@ -330,14 +337,8 @@ class FlowService {
      */
     extractActionItems(rawData) {
         const items = [];
-        // Pattern matching for action items
-        const patterns = [
-            /need to\s+(.+?)(?:\.|$)/gi,
-            /should\s+(.+?)(?:\.|$)/gi,
-            /todo:\s*(.+?)(?:\.|$)/gi,
-            /reminder:\s*(.+?)(?:\.|$)/gi,
-        ];
-        patterns.forEach((pattern) => {
+        ACTION_PATTERNS.forEach((pattern) => {
+            pattern.lastIndex = 0;
             const matches = rawData.matchAll(pattern);
             for (const match of matches) {
                 if (match[1] && match[1].length > 5) {

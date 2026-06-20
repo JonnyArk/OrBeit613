@@ -107,22 +107,6 @@ export interface DistillationResponse {
     /** Pipeline execution time in milliseconds */
     processingTimeMs: number;
 }
-/**
- * Flow Service for context distillation and workflow pipelines.
- *
- * @remarks
- * Implements the Sovereign Pipeline that transforms unstructured
- * user data into structured Life Events for the Drift database.
- *
- * @example
- * const flow = new FlowService();
- * const result = await flow.distillContext({
- *   rawData: "Had coffee with Sarah at the usual place...",
- *   dataType: 'note_text',
- *   userId: 'user123'
- * });
- * console.log(result.event.category); // 'relationship'
- */
 export declare class FlowService {
     private readonly db;
     private readonly aiManager;
