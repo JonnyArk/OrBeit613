@@ -180,17 +180,17 @@ class AIManager {
     async getMonthlyUsage() {
         try {
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const snapshot = await this.db
-                .collection(this.usageCollection)
-                .where("timestamp", ">=", monthStart)
-                .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+            // ⚡ Bolt: Replaced O(N) multi-document query with O(1) single-document read of the pre-calculated aggregate.
+            // This reduces Firestore read operations from N (number of usages this month) to 1,
+            // significantly lowering latency and cost.
+            const doc = await aggregateRef.get();
+            if (doc.exists) {
                 const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+                return data?.totalUsed || 0;
+            }
+            return 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });
