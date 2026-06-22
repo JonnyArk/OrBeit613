@@ -152,8 +152,8 @@ class AIManager {
             timestamp: firestore_1.FieldValue.serverTimestamp(),
             creditsUsed,
             featureId,
-            userId,
-            metadata,
+            ...(userId !== undefined && { userId }),
+            ...(metadata !== undefined && { metadata }),
         };
         try {
             await this.db.collection(this.usageCollection).add(entry);
@@ -180,17 +180,14 @@ class AIManager {
     async getMonthlyUsage() {
         try {
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const snapshot = await this.db
-                .collection(this.usageCollection)
-                .where("timestamp", ">=", monthStart)
-                .get();
-            let total = 0;
-            snapshot.forEach((doc) => {
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+            const doc = await aggregateRef.get();
+            if (doc.exists) {
                 const data = doc.data();
-                total += data.creditsUsed || 0;
-            });
-            return total;
+                return data?.totalUsed || 0;
+            }
+            return 0;
         }
         catch (error) {
             logger.error("Failed to get monthly usage", { error });
