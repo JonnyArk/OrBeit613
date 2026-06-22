@@ -23,6 +23,10 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth } from "./auth";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cors = require("cors");
+const corsHandler = cors({ origin: true });
 
 // Initialize Firebase Admin
 initializeApp();
@@ -111,14 +115,21 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        corsHandler(request, response as any, async () => {
+            try {
+                // Ensure the user is authenticated
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const uid = await requireAuth(request, response as any);
+                if (!uid) return;
 
-        try {
-            const body = request.body as AssetGenerationRequest;
+                // Only allow POST
+                if (request.method !== "POST") {
+                    response.status(405).json({ error: "Method not allowed" });
+                    return;
+                }
+
+                const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -136,20 +147,21 @@ export const generateAsset = onRequest(
             const whiskService = getWhiskService();
             const result = await whiskService.generateAsset(body);
 
-            response.json({
-                success: true,
-                data: result,
-                timestamp: new Date().toISOString(),
-            });
-        } catch (error) {
-            logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+                response.json({
+                    success: true,
+                    data: result,
+                    timestamp: new Date().toISOString(),
+                });
+            } catch (error) {
+                logger.error("Asset generation failed", { error });
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                response.status(500).json({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        });
     }
 );
 
@@ -167,14 +179,21 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        corsHandler(request, response as any, async () => {
+            try {
+                // Ensure the user is authenticated
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const uid = await requireAuth(request, response as any);
+                if (!uid) return;
 
-        try {
-            const body = request.body as DistillationRequest;
+                // Only allow POST
+                if (request.method !== "POST") {
+                    response.status(405).json({ error: "Method not allowed" });
+                    return;
+                }
+
+                const body = request.body as DistillationRequest;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -193,19 +212,20 @@ export const distillContext = onRequest(
             const flowService = getFlowService();
             const result = await flowService.distillContext(body);
 
-            response.json({
-                success: true,
-                data: result,
-                timestamp: new Date().toISOString(),
-            });
-        } catch (error) {
-            logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+                response.json({
+                    success: true,
+                    data: result,
+                    timestamp: new Date().toISOString(),
+                });
+            } catch (error) {
+                logger.error("Context distillation failed", { error });
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+                response.status(500).json({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        });
     }
 );
