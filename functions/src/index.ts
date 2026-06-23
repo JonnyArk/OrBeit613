@@ -15,6 +15,12 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cors = require("cors");
+const corsHandler = cors({ origin: true });
+
+import { requireAuth } from "./auth";
+
 // AI Services
 import {
     getAIManager,
@@ -110,15 +116,19 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        corsHandler(request, response, async () => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
-        try {
-            const body = request.body as AssetGenerationRequest;
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const userId = await requireAuth(request as any);
+                const body = request.body as AssetGenerationRequest;
+                body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -141,15 +151,25 @@ export const generateAsset = onRequest(
                 data: result,
                 timestamp: new Date().toISOString(),
             });
-        } catch (error) {
-            logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+            } catch (error) {
+                logger.error("Asset generation failed", { error });
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
+
+                if (errorMessage.includes("Unauthorized")) {
+                    response.status(401).json({
+                        success: false,
+                        error: errorMessage,
+                    });
+                    return;
+                }
+
+                response.status(500).json({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        });
     }
 );
 

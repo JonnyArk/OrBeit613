@@ -49,6 +49,10 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cors = require("cors");
+const corsHandler = cors({ origin: true });
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -127,41 +131,53 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
-exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.assetType || !body.context) {
-            response.status(400).json({
-                error: "Missing required fields: assetType and context",
-            });
+exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, (request, response) => {
+    corsHandler(request, response, async () => {
+        // Only allow POST
+        if (request.method !== "POST") {
+            response.status(405).json({ error: "Method not allowed" });
             return;
         }
-        logger.info("Asset generation request received", {
-            assetType: body.assetType,
-            size: body.size || "medium",
-        });
-        const whiskService = (0, ai_1.getWhiskService)();
-        const result = await whiskService.generateAsset(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const userId = await (0, auth_1.requireAuth)(request);
+            const body = request.body;
+            body.userId = userId;
+            // Validate required fields
+            if (!body.assetType || !body.context) {
+                response.status(400).json({
+                    error: "Missing required fields: assetType and context",
+                });
+                return;
+            }
+            logger.info("Asset generation request received", {
+                assetType: body.assetType,
+                size: body.size || "medium",
+            });
+            const whiskService = (0, ai_1.getWhiskService)();
+            const result = await whiskService.generateAsset(body);
+            response.json({
+                success: true,
+                data: result,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Asset generation failed", { error });
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            if (errorMessage.includes("Unauthorized")) {
+                response.status(401).json({
+                    success: false,
+                    error: errorMessage,
+                });
+                return;
+            }
+            response.status(500).json({
+                success: false,
+                error: errorMessage,
+            });
+        }
+    });
 });
 /**
  * Distill raw context into structured Life Event using Flow service.
