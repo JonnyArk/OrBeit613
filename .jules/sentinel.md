@@ -1,0 +1,4 @@
+## 2024-06-24 - Missing Authentication on Sensitive Cloud Function
+**Vulnerability:** The `generateAsset` Firebase HTTP Cloud Function lacked authentication checks and trusted a client-provided `userId` in the request body, allowing unauthorized access to AI generation services (financial cost risk).
+**Learning:** Firebase `onRequest` HTTP functions are unauthenticated by default. Unlike `onCall` functions, they require explicit middleware wrappers for CORS and authentication checks to protect sensitive operations. Unhandled errors inside Express middleware async callbacks can crash instances if not wrapped in `try/catch`.
+**Prevention:** Always wrap `onRequest` functions accessed by browser clients with `corsHandler`, securely parse and verify the authorization token, ensure robust async error handling, and never trust a `userId` supplied in the request payload over the verified identity from the ID token.

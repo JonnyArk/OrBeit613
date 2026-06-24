@@ -23,6 +23,11 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { requireAuth, AuthenticatedRequest } from "./auth";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cors = require("cors");
+const corsHandler = cors({ origin: true });
 
 // Initialize Firebase Admin
 initializeApp();
@@ -110,46 +115,62 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        corsHandler(request, response, async () => {
+            try {
+                await requireAuth(request as AuthenticatedRequest, response, async () => {
+                    // Only allow POST
+                    if (request.method !== "POST") {
+                        response.status(405).json({ error: "Method not allowed" });
+                        return;
+                    }
 
-        try {
-            const body = request.body as AssetGenerationRequest;
+                    try {
+                        const body = request.body as AssetGenerationRequest;
 
-            // Validate required fields
-            if (!body.assetType || !body.context) {
-                response.status(400).json({
-                    error: "Missing required fields: assetType and context",
+                        // Securely enforce the user ID from the authentication token
+                        if ((request as AuthenticatedRequest).user) {
+                            body.userId = (request as AuthenticatedRequest).user!.uid;
+                        }
+
+                        // Validate required fields
+                        if (!body.assetType || !body.context) {
+                            response.status(400).json({
+                                error: "Missing required fields: assetType and context",
+                            });
+                            return;
+                        }
+
+                        logger.info("Asset generation request received", {
+                            assetType: body.assetType,
+                            size: body.size || "medium",
+                        });
+
+                        const whiskService = getWhiskService();
+                        const result = await whiskService.generateAsset(body);
+
+                        response.json({
+                            success: true,
+                            data: result,
+                            timestamp: new Date().toISOString(),
+                        });
+                    } catch (error) {
+                        logger.error("Asset generation failed", { error });
+                        const errorMessage =
+                            error instanceof Error ? error.message : "Unknown error";
+                        response.status(500).json({
+                            success: false,
+                            error: errorMessage,
+                        });
+                    }
                 });
-                return;
+            } catch (error) {
+                logger.error("Unhandled error in generateAsset CORS wrapper", { error });
+                if (!response.headersSent) {
+                    response.status(500).json({ success: false, error: "Internal server error" });
+                }
             }
-
-            logger.info("Asset generation request received", {
-                assetType: body.assetType,
-                size: body.size || "medium",
-            });
-
-            const whiskService = getWhiskService();
-            const result = await whiskService.generateAsset(body);
-
-            response.json({
-                success: true,
-                data: result,
-                timestamp: new Date().toISOString(),
-            });
-        } catch (error) {
-            logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
-            response.status(500).json({
-                success: false,
-                error: errorMessage,
-            });
-        }
+        });
     }
 );
 
