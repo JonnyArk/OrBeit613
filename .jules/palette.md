@@ -1,0 +1,3 @@
+## 2024-06-24 - Accessibility for Reminder Banner Close Button
+**Learning:** In Flutter applications, custom icon buttons created by wrapping an `Icon` widget in a `GestureDetector` lack proper accessibility semantics, keyboard focus, and visual tap feedback. This is especially problematic for temporary/dismissible banners where users rely on screen readers.
+**Action:** Replace `GestureDetector` wrapped icons with native `IconButton` widgets, providing a `tooltip` attribute for screen readers, and setting `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to prevent layout breakage.
