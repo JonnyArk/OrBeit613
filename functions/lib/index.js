@@ -51,6 +51,10 @@ const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
+const auth_1 = require("./auth");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cors = require("cors");
+const corsHandler = cors({ origin: true });
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
@@ -127,41 +131,57 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
-exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.assetType || !body.context) {
-            response.status(400).json({
-                error: "Missing required fields: assetType and context",
+exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, (request, response) => {
+    corsHandler(request, response, async () => {
+        try {
+            await (0, auth_1.requireAuth)(request, response, async () => {
+                // Only allow POST
+                if (request.method !== "POST") {
+                    response.status(405).json({ error: "Method not allowed" });
+                    return;
+                }
+                try {
+                    const body = request.body;
+                    // Securely enforce the user ID from the authentication token
+                    if (request.user) {
+                        body.userId = request.user.uid;
+                    }
+                    // Validate required fields
+                    if (!body.assetType || !body.context) {
+                        response.status(400).json({
+                            error: "Missing required fields: assetType and context",
+                        });
+                        return;
+                    }
+                    logger.info("Asset generation request received", {
+                        assetType: body.assetType,
+                        size: body.size || "medium",
+                    });
+                    const whiskService = (0, ai_1.getWhiskService)();
+                    const result = await whiskService.generateAsset(body);
+                    response.json({
+                        success: true,
+                        data: result,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+                catch (error) {
+                    logger.error("Asset generation failed", { error });
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                    response.status(500).json({
+                        success: false,
+                        error: errorMessage,
+                    });
+                }
             });
-            return;
         }
-        logger.info("Asset generation request received", {
-            assetType: body.assetType,
-            size: body.size || "medium",
-        });
-        const whiskService = (0, ai_1.getWhiskService)();
-        const result = await whiskService.generateAsset(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        catch (error) {
+            logger.error("Unhandled error in generateAsset CORS wrapper", { error });
+            if (!response.headersSent) {
+                response.status(500).json({ success: false, error: "Internal server error" });
+            }
+        }
+    });
 });
 /**
  * Distill raw context into structured Life Event using Flow service.
