@@ -49,6 +49,9 @@ const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cors = require("cors");
+const auth_1 = require("./auth");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -97,24 +100,30 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
-    try {
-        const aiManager = (0, ai_1.getAIManager)();
-        const summary = await aiManager.getUsageSummary();
-        logger.info("Credit usage requested", summary);
-        response.json({
-            success: true,
-            data: summary,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Failed to get credit usage", { error });
-        response.status(500).json({
-            success: false,
-            error: "Failed to retrieve credit usage",
-        });
-    }
+const corsHandler = cors({ origin: true });
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    corsHandler(request, response, async () => {
+        try {
+            const uid = await (0, auth_1.requireAuth)(request, response);
+            if (!uid)
+                return;
+            const aiManager = (0, ai_1.getAIManager)();
+            const summary = await aiManager.getUsageSummary();
+            logger.info("Credit usage requested", summary);
+            response.json({
+                success: true,
+                data: summary,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Failed to get credit usage", { error });
+            response.status(500).json({
+                success: false,
+                error: "Failed to retrieve credit usage",
+            });
+        }
+    });
 });
 /**
  * Generate visual asset using Whisk service.
@@ -128,40 +137,45 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.assetType || !body.context) {
-            response.status(400).json({
-                error: "Missing required fields: assetType and context",
-            });
+    corsHandler(request, response, async () => {
+        // Only allow POST
+        if (request.method !== "POST") {
+            response.status(405).json({ error: "Method not allowed" });
             return;
         }
-        logger.info("Asset generation request received", {
-            assetType: body.assetType,
-            size: body.size || "medium",
-        });
-        const whiskService = (0, ai_1.getWhiskService)();
-        const result = await whiskService.generateAsset(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Asset generation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        try {
+            const uid = await (0, auth_1.requireAuth)(request, response);
+            if (!uid)
+                return;
+            const body = request.body;
+            // Validate required fields
+            if (!body.assetType || !body.context) {
+                response.status(400).json({
+                    error: "Missing required fields: assetType and context",
+                });
+                return;
+            }
+            logger.info("Asset generation request received", {
+                assetType: body.assetType,
+                size: body.size || "medium",
+            });
+            const whiskService = (0, ai_1.getWhiskService)();
+            const result = await whiskService.generateAsset(body);
+            response.json({
+                success: true,
+                data: result,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Asset generation failed", { error });
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            response.status(500).json({
+                success: false,
+                error: errorMessage,
+            });
+        }
+    });
 });
 /**
  * Distill raw context into structured Life Event using Flow service.
@@ -175,40 +189,45 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
-    // Only allow POST
-    if (request.method !== "POST") {
-        response.status(405).json({ error: "Method not allowed" });
-        return;
-    }
-    try {
-        const body = request.body;
-        // Validate required fields
-        if (!body.rawData || !body.dataType) {
-            response.status(400).json({
-                error: "Missing required fields: rawData and dataType",
-            });
+    corsHandler(request, response, async () => {
+        // Only allow POST
+        if (request.method !== "POST") {
+            response.status(405).json({ error: "Method not allowed" });
             return;
         }
-        logger.info("Context distillation request received", {
-            dataType: body.dataType,
-            complexity: body.complexity || "standard",
-            inputLength: body.rawData.length,
-        });
-        const flowService = (0, ai_1.getFlowService)();
-        const result = await flowService.distillContext(body);
-        response.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        });
-    }
-    catch (error) {
-        logger.error("Context distillation failed", { error });
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        response.status(500).json({
-            success: false,
-            error: errorMessage,
-        });
-    }
+        try {
+            const uid = await (0, auth_1.requireAuth)(request, response);
+            if (!uid)
+                return;
+            const body = request.body;
+            // Validate required fields
+            if (!body.rawData || !body.dataType) {
+                response.status(400).json({
+                    error: "Missing required fields: rawData and dataType",
+                });
+                return;
+            }
+            logger.info("Context distillation request received", {
+                dataType: body.dataType,
+                complexity: body.complexity || "standard",
+                inputLength: body.rawData.length,
+            });
+            const flowService = (0, ai_1.getFlowService)();
+            const result = await flowService.distillContext(body);
+            response.json({
+                success: true,
+                data: result,
+                timestamp: new Date().toISOString(),
+            });
+        }
+        catch (error) {
+            logger.error("Context distillation failed", { error });
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            response.status(500).json({
+                success: false,
+                error: errorMessage,
+            });
+        }
+    });
 });
 //# sourceMappingURL=index.js.map
