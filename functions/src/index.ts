@@ -16,6 +16,7 @@ import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
 // AI Services
+import { corsHandler, requireAuth } from "./auth";
 import {
     getAIManager,
     getWhiskService,
@@ -111,14 +112,18 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        corsHandler(request, response, async () => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
-        try {
-            const body = request.body as AssetGenerationRequest;
+            const uid = await requireAuth(request, response);
+            if (!uid) return;
+
+            try {
+                const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -143,13 +148,12 @@ export const generateAsset = onRequest(
             });
         } catch (error) {
             logger.error("Asset generation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An error occurred",
             });
         }
+        });
     }
 );
 
@@ -167,14 +171,18 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        corsHandler(request, response, async () => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
-        try {
-            const body = request.body as DistillationRequest;
+            const uid = await requireAuth(request, response);
+            if (!uid) return;
+
+            try {
+                const body = request.body as DistillationRequest;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -200,12 +208,11 @@ export const distillContext = onRequest(
             });
         } catch (error) {
             logger.error("Context distillation failed", { error });
-            const errorMessage =
-                error instanceof Error ? error.message : "Unknown error";
             response.status(500).json({
                 success: false,
-                error: errorMessage,
+                error: "An error occurred",
             });
         }
+        });
     }
 );
