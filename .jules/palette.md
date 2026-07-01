@@ -1,0 +1,3 @@
+## 2026-07-01 - IconButton vs GestureDetector for Accessibility
+**Learning:** Custom icon buttons built with `GestureDetector` (common in Flutter components like `ReminderBanner`) lack proper accessibility semantics (ARIA-equivalent), keyboard focus, and visual tap feedback, leading to a poorer experience for screen readers and keyboard users.
+**Action:** Always replace icon-only `GestureDetector`s with native `IconButton`s. When layout constraints require the button to be small, use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to prevent the default sizing from breaking the visual design, and always provide a `tooltip` attribute.
