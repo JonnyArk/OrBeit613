@@ -14,6 +14,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { requireAuth } from "./auth";
 
 // AI Services
 import {
@@ -110,14 +111,15 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        requireAuth(request, response, async (_uid) => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
-        try {
+            try {
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -150,6 +152,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
 
@@ -166,14 +169,15 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        requireAuth(request, response, async (_uid) => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
-        try {
+            try {
             const body = request.body as DistillationRequest;
 
             // Validate required fields
@@ -207,5 +211,6 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
