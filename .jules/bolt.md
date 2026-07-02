@@ -1,0 +1,3 @@
+## 2024-06-25 - [Flutter List Rendering Optimization]
+**Learning:** In Flutter, passing pre-instantiated widgets into `ListView` (or `ListView`'s eagerly-instantiated children array) negates its lazy-loading performance benefits. Eagerly generating and instantiating widgets for the entire list is inefficient and can cause jank on long lists.
+**Action:** Always flatten data into lightweight structures (like arrays of Maps or view models) and dynamically instantiate widgets inside `ListView.builder`'s `itemBuilder` callback based on the item type. Ensure index-based staggered animations (e.g., `delay: Duration(milliseconds: i * 40)`) are removed, as they will cause scroll jank when items scroll into view and trigger delayed entrance.
