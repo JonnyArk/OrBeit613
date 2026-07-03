@@ -237,32 +237,47 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flatten heterogeneous data to leverage ListView.builder's lazy-loading,
+    // reducing memory and improving scroll performance for long task lists.
+    // Using Dart 3 records for type safety.
+    final items = <({String type, domain.TaskPriority? priority, int? count, domain.Task? task})>[];
+    for (final entry in grouped.entries) {
+      items.add((type: 'priorityHeader', priority: entry.key, count: entry.value.length, task: null));
+      for (final task in entry.value) {
+        items.add((type: 'activeTask', priority: null, count: null, task: task));
+      }
+    }
+    if (_completedTasks.isNotEmpty) {
+      items.add((type: 'spacer', priority: null, count: null, task: null));
+      items.add((type: 'completedHeader', priority: null, count: null, task: null));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add((type: 'completedTask', priority: null, count: null, task: task));
+        }
+      }
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        if (item.type == 'priorityHeader') return _buildPriorityHeader(item.priority!, item.count!);
+        if (item.type == 'activeTask') {
+          final t = item.task!;
+          // ⚡ Bolt: Removed item-level entrance animations entirely to prevent them from
+          // re-triggering every time the widget is built as it scrolls into view.
+          return _SwipeableTaskTile(
+            task: t,
+            onComplete: () => _completeTask(t.id),
+            onDelete: () => _deleteTask(t.id),
+          );
+        }
+        if (item.type == 'spacer') return const SizedBox(height: 8);
+        if (item.type == 'completedHeader') return _buildCompletedHeader();
+        if (item.type == 'completedTask') return _CompletedTaskTile(task: item.task!);
+        return const SizedBox.shrink();
+      },
     );
   }
 
