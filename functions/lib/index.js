@@ -45,10 +45,13 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cors = require("cors");
 // AI Services
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
@@ -60,6 +63,27 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
     maxInstances: 10,
     region: "us-central1",
 });
+const corsHandler = cors({ origin: true });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const withAuth = (handler) => async (req, res) => {
+    corsHandler(req, res, async () => {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                res.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+            await handler(req, res);
+        }
+        catch (error) {
+            logger.error("Authentication failed", { error });
+            if (!res.headersSent) {
+                res.status(401).json({ error: "Unauthorized" });
+            }
+        }
+    });
+};
 /**
  * Health check endpoint for monitoring service availability.
  *
@@ -127,7 +151,9 @@ exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
-exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+withAuth(async (request, response) => {
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
@@ -162,7 +188,7 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
             error: errorMessage,
         });
     }
-});
+}));
 /**
  * Distill raw context into structured Life Event using Flow service.
  * Implements the Sovereign Pipeline for context processing.
@@ -174,7 +200,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
-exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, async (request, response) => {
+exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+withAuth(async (request, response) => {
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
@@ -210,5 +238,5 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
             error: errorMessage,
         });
     }
-});
+}));
 //# sourceMappingURL=index.js.map

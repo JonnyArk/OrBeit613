@@ -10,10 +10,13 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cors = require("cors");
 
 // AI Services
 import {
@@ -35,6 +38,28 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+const corsHandler = cors({ origin: true });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const withAuth = (handler: any) => async (req: any, res: any) => {
+    corsHandler(req, res, async () => {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                res.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+            await handler(req, res);
+        } catch (error) {
+            logger.error("Authentication failed", { error });
+            if (!res.headersSent) {
+                res.status(401).json({ error: "Unauthorized" });
+            }
+        }
+    });
+};
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -110,7 +135,8 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    withAuth(async (request: any, response: any) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -150,7 +176,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
 
 /**
@@ -166,7 +192,8 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    withAuth(async (request: any, response: any) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -207,5 +234,5 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
