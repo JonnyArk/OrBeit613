@@ -1,0 +1,3 @@
+## 2026-07-06 - Accessible Icon Buttons in Banners
+**Learning:** Custom icon buttons created by wrapping an `Icon` widget in a `GestureDetector` lack proper accessibility semantics (like ARIA labels/tooltips), keyboard focus, and visual tap feedback, which are especially important for non-intrusive elements like dismissable banners.
+**Action:** Replace `GestureDetector` with native `IconButton` widgets when wrapping icons, and provide a `tooltip` attribute for screen readers. Use `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to prevent the `IconButton`'s default sizing from breaking surrounding tight layouts.
