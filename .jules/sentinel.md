@@ -1,0 +1,4 @@
+## YYYY-MM-DD - [CRITICAL] Missing Authentication on Cloud Functions
+**Vulnerability:** Firebase Cloud Functions `onRequest` endpoints (`generateAsset`, `distillContext`) lacked authentication checks, leaving them completely unprotected and open to public internet.
+**Learning:** Adding token validation via `getAuth().verifyIdToken` in HTTP functions requires correct CORS handling when accessed by browser clients. Directly returning 401s on unauthenticated pre-flight (`OPTIONS`) requests breaks CORS, so the auth check must be wrapped within the CORS middleware callback.
+**Prevention:** All sensitive HTTP endpoints (`onRequest`) must validate authentication tokens (e.g., Bearer tokens). Ensure that CORS headers are appropriately managed either through an API gateway or via middleware before evaluating authentication details.
