@@ -1,0 +1,4 @@
+## 2024-05-24 - Securing onRequest Firebase Functions with CORS and Auth
+**Vulnerability:** Publicly exposed `onRequest` endpoints allowed unauthenticated access to sensitive AI and usage operations.
+**Learning:** Unlike `onCall` functions which handle auth implicitly, `onRequest` functions accessed by browser clients require manual CORS middleware wrapping `cors({ origin: true })` AND manual ID token verification using `getAuth().verifyIdToken()`. Crucially, the auth validation must occur *inside* the CORS callback to prevent blocking `OPTIONS` preflight requests, and the callback must be wrapped in a secure `try/catch` block to handle unhandled promise rejections properly.
+**Prevention:** Always use `onCall` for client-to-server authenticated calls, or meticulously implement CORS, Bearer token validation, and error boundaries for `onRequest` endpoints.

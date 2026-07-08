@@ -14,6 +14,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import { withAuth } from "./auth";
 
 // AI Services
 import {
@@ -76,12 +77,12 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(withAuth(async (_request, response, uid) => {
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
-        logger.info("Credit usage requested", summary);
+        logger.info("Credit usage requested", { ...summary, uid });
 
         response.json({
             success: true,
@@ -95,7 +96,7 @@ export const creditUsage = onRequest(async (_request, response) => {
             error: "Failed to retrieve credit usage",
         });
     }
-});
+}));
 
 /**
  * Generate visual asset using Whisk service.
@@ -110,7 +111,7 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    withAuth(async (request, response, uid) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -131,6 +132,7 @@ export const generateAsset = onRequest(
             logger.info("Asset generation request received", {
                 assetType: body.assetType,
                 size: body.size || "medium",
+                uid,
             });
 
             const whiskService = getWhiskService();
@@ -150,7 +152,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
 
 /**
@@ -166,7 +168,7 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    withAuth(async (request, response, uid) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -188,6 +190,7 @@ export const distillContext = onRequest(
                 dataType: body.dataType,
                 complexity: body.complexity || "standard",
                 inputLength: body.rawData.length,
+                uid,
             });
 
             const flowService = getFlowService();
@@ -207,5 +210,5 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
