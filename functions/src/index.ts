@@ -10,10 +10,14 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import cors from "cors";
+
+const corsHandler = cors({ origin: true });
 
 // AI Services
 import {
@@ -110,15 +114,31 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        corsHandler(request, response, async () => {
+            try {
+                const authHeader = request.headers.authorization;
+                if (!authHeader?.startsWith("Bearer ")) {
+                    response.status(401).json({ error: "Unauthorized" });
+                    return;
+                }
 
-        try {
-            const body = request.body as AssetGenerationRequest;
+                let decoded;
+                try {
+                    decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+                } catch {
+                    response.status(401).json({ error: "Unauthorized" });
+                    return;
+                }
+
+                // Only allow POST
+                if (request.method !== "POST") {
+                    response.status(405).json({ error: "Method not allowed" });
+                    return;
+                }
+
+                const body = request.body as AssetGenerationRequest;
+                body.userId = decoded.uid; // Securely enforce user identity
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -150,6 +170,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
 
@@ -166,15 +187,31 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+    (request, response) => {
+        corsHandler(request, response, async () => {
+            try {
+                const authHeader = request.headers.authorization;
+                if (!authHeader?.startsWith("Bearer ")) {
+                    response.status(401).json({ error: "Unauthorized" });
+                    return;
+                }
 
-        try {
-            const body = request.body as DistillationRequest;
+                let decoded;
+                try {
+                    decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+                } catch {
+                    response.status(401).json({ error: "Unauthorized" });
+                    return;
+                }
+
+                // Only allow POST
+                if (request.method !== "POST") {
+                    response.status(405).json({ error: "Method not allowed" });
+                    return;
+                }
+
+                const body = request.body as DistillationRequest;
+                body.userId = decoded.uid; // Securely enforce user identity
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
@@ -207,5 +244,6 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
