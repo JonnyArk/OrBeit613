@@ -1,0 +1,3 @@
+## 2024-07-11 - [Listview Lazy Loading Optimization]
+**Learning:** Using an eagerly instantiated ListView with a children array impacts performance for long lists. To optimize heterogeneous lists for ListView.builder, the data can be flattened into an array of maps to dynamically build headers, active tasks, spacers, and completed tasks. During this refactoring, index-based staggered animation delays must be removed to avoid visual regression and scroll jank when lazy-loaded items scroll into view.
+**Action:** Always flatten heterogeneous data for ListView.builder and avoid index-based entrance animations on lazy-loaded lists.
