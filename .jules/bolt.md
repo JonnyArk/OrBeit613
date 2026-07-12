@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Optimize ListView Rendering
+**Learning:** In Flutter, eagerly instantiating heterogenous lists via ListView is an anti-pattern for performance, causing scroll jank on large lists. However, refactoring to ListView.builder requires flattening the hierarchical data structure into a linear array of maps/types so that items can be instantiated lazily in the itemBuilder. Furthermore, index-based staggered entrance animations must be removed when migrating to ListView.builder because items scrolling into view will inappropriately trigger entrance delays.
+**Action:** Always flatten heterogeneous data before using ListView.builder and remove delay values from scroll-driven entrance animations to prevent visual regressions when lazily rendering.
