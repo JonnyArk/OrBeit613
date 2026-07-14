@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Lazy-Loading Heterogeneous Lists in Flutter
+**Learning:** Passing pre-instantiated widgets into `ListView` negates lazy-loading performance benefits. When refactoring an eagerly-instantiated list to use `ListView.builder`, index-based staggered entrance animations must be removed or adjusted, otherwise items scrolling into view will inappropriately trigger entrance delays, causing visual regressions and scroll jank.
+**Action:** Flatten data into lightweight data structures (e.g., an array of maps) and dynamically instantiate widgets inside the `itemBuilder` callback based on item type. Always remove index-based stagger animations on scrollable list items when moving to a lazy builder.
