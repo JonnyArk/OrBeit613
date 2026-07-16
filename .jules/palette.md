@@ -1,0 +1,3 @@
+## 2024-07-16 - Replace GestureDetector with IconButton for banner dismissal
+**Learning:** Replaced a generic `GestureDetector` with an `IconButton` to make the banner dismiss button more accessible. Used `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to prevent the `IconButton` from breaking the surrounding visual layout while enabling the addition of a `tooltip` ('Dismiss reminder').
+**Action:** Always favor `IconButton` (or semantic buttons) over `GestureDetector` for simple tap actions, configuring constraints/padding if layout issues arise, to instantly gain accessibility features (semantics, focus, tooltips).
