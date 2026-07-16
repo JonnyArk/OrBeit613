@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { withAuth } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -76,9 +77,10 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
-    try {
-        const aiManager = getAIManager();
+export const creditUsage = onRequest(async (request, response) => {
+    withAuth(request, response, async () => {
+        try {
+            const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
         logger.info("Credit usage requested", summary);
@@ -95,6 +97,7 @@ export const creditUsage = onRequest(async (_request, response) => {
             error: "Failed to retrieve credit usage",
         });
     }
+    });
 });
 
 /**
@@ -111,11 +114,12 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        withAuth(request, response, async () => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -150,6 +154,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
 
@@ -167,11 +172,12 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
-        // Only allow POST
-        if (request.method !== "POST") {
-            response.status(405).json({ error: "Method not allowed" });
-            return;
-        }
+        withAuth(request, response, async () => {
+            // Only allow POST
+            if (request.method !== "POST") {
+                response.status(405).json({ error: "Method not allowed" });
+                return;
+            }
 
         try {
             const body = request.body as DistillationRequest;
@@ -207,5 +213,6 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
