@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Refactoring heterogeneous ListView to ListView.builder
+**Learning:** In Flutter, passing pre-instantiated widgets into ListView.builder negates its lazy-loading performance benefits. When dealing with heterogeneous lists, we need to pass a list of closures instead of pre-rendered widgets. Also, when refactoring to lazy loading, staggered index-based entrance animations must be removed or adjusted because scrolling them into view later causes inappropriate delays and visual artifacts.
+**Action:** Use a list of closure functions (e.g., `List<Widget Function()>`) and evaluate them dynamically inside `itemBuilder`. Remove `delay: Duration(...)` for items when migrating to `ListView.builder`.
