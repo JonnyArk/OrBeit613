@@ -10,10 +10,29 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import cors from "cors";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const withAuth = (req: any, res: any, handler: () => Promise<void>) => {
+    cors({ origin: true })(req, res, async () => {
+        const auth = req.headers.authorization;
+        if (!auth || !auth.startsWith("Bearer ")) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            await getAuth().verifyIdToken(auth.split("Bearer ")[1]);
+            await handler();
+        } catch (_error) {
+            res.status(401).json({ error: "Unauthorized" });
+        }
+    });
+};
 
 // AI Services
 import {
@@ -77,6 +96,7 @@ export const healthCheck = onRequest(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 export const creditUsage = onRequest(async (_request, response) => {
+    withAuth(_request, response, async () => {
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -95,6 +115,7 @@ export const creditUsage = onRequest(async (_request, response) => {
             error: "Failed to retrieve credit usage",
         });
     }
+    });
 });
 
 /**
@@ -111,6 +132,7 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        withAuth(request, response, async () => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -150,6 +172,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
 
@@ -167,6 +190,7 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+        withAuth(request, response, async () => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -207,5 +231,6 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
+        });
     }
 );
