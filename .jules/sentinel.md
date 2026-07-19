@@ -1,0 +1,4 @@
+## YYYY-MM-DD - Missing Authentication on Cloud Functions
+**Vulnerability:** Firebase Cloud Functions (`onRequest` endpoints in `functions/src/index.ts` like `healthCheck`, `creditUsage`, `generateAsset`, and `distillContext`) were exposed without any authentication or authorization checks.
+**Learning:** By default, Firebase HTTP functions are public. Since these are AI-related operations that cost credits and potentially process sensitive user data, they must be protected to prevent abuse and ensure attribution to specific users. Wrapping them inside a CORS-enabled authentication middleware properly secures them.
+**Prevention:** Always implement explicit authentication middleware (e.g., verifying Bearer tokens via `firebase-admin/auth`) on all exposed HTTP endpoints, especially those dealing with cost-incurring APIs or sensitive operations.
