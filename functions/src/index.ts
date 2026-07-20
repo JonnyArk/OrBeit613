@@ -23,6 +23,7 @@ import {
     type AssetGenerationRequest,
     type DistillationRequest,
 } from "./ai";
+import { withAuth } from "./auth";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -110,7 +111,7 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    withAuth(async (request, response, uid) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -119,6 +120,7 @@ export const generateAsset = onRequest(
 
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -150,7 +152,7 @@ export const generateAsset = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
 
 /**
@@ -166,7 +168,7 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    withAuth(async (request, response, _uid) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -207,5 +209,5 @@ export const distillContext = onRequest(
                 error: errorMessage,
             });
         }
-    }
+    })
 );
