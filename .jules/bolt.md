@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Optimize ListView with ListView.builder and closures
+**Learning:** Using a regular `ListView` with many pre-instantiated children causes rendering bottlenecks and negates lazy-loading. In Flutter, passing pre-instantiated widgets into `ListView.builder` also negates its lazy-loading performance benefits.
+**Action:** To optimize heterogeneous lists while maintaining strong typing and preserving local variables (like index for staggered animations), construct an array of closures (e.g., `List<Widget Function()>`) and evaluate them dynamically inside the `itemBuilder` callback, instead of using weakly-typed Maps or dynamic objects.
