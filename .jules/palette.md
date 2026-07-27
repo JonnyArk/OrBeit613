@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Dynamic Semantics for Custom Widgets
+**Learning:** Custom visual UI elements (like the OrBeacon) are completely invisible to screen readers without explicit Semantics widgets. Additionally, elements that change state need dynamic accessibility labels so users know what tapping them will do in their current context.
+**Action:** Always wrap custom `GestureDetector` elements that act as buttons in `Semantics(button: true)`. If the interaction changes based on state, make the `label` property a computed getter that reflects the current state (e.g., 'Stop listening' vs 'Activate assistant').
