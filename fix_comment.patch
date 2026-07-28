@@ -1,0 +1,10 @@
+--- app/lib/ui/life_event_timeline.dart
++++ app/lib/ui/life_event_timeline.dart
+@@ -275,6 +275,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
+               onDelete: () => _deleteEvent(event.id),
+             )
+                 .animate()
++                // Capping the index delay to 10 prevents massive delays for items scrolled into view
+                 .fadeIn(
+                   duration: 400.ms,
+                   delay: Duration(milliseconds: math.min(index, 10) * 50),
