@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -75,9 +76,18 @@ export const healthCheck = onRequest(async (_request, response) => {
  *
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
+ * // Headers: Authorization: Bearer <token>
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+        const token = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(token);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -106,6 +116,7 @@ export const creditUsage = onRequest(async (_request, response) => {
  *
  * @example
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/generateAsset
+ * // Headers: Authorization: Bearer <token>
  * // Body: { "assetType": "badge", "context": "first task completed", "size": "medium" }
  */
 export const generateAsset = onRequest(
@@ -118,6 +129,14 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -162,6 +181,7 @@ export const generateAsset = onRequest(
  *
  * @example
  * // POST https://us-central1-orbeit-613.cloudfunctions.net/distillContext
+ * // Headers: Authorization: Bearer <token>
  * // Body: { "rawData": "Had coffee with Sarah...", "dataType": "note_text" }
  */
 export const distillContext = onRequest(
@@ -174,6 +194,14 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
