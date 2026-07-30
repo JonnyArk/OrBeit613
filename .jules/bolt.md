@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Virtualizing Heterogeneous Lists in Flutter
+**Learning:** In Flutter, passing pre-instantiated widgets into ListView.builder negates its lazy-loading performance benefits. Applying staggered index-based delays in such lists also causes off-screen items to have massive delays when scrolled into view.
+**Action:** Construct an array of closures (List<Widget Function()>) and evaluate them dynamically in the itemBuilder callback for heterogeneous lists, and cap the staggered delay (e.g., using math.min(i, 10)) to preserve staggered initial rendering while preventing extreme delays on scroll.
