@@ -10,10 +10,25 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+/**
+ * Validates the Authorization Bearer token from the request.
+ */
+async function validateAuth(request: Request): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) return false;
+    try {
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 // AI Services
 import {
@@ -117,6 +132,11 @@ export const generateAsset = onRequest(
             return;
         }
 
+        if (!(await validateAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -170,6 +190,11 @@ export const distillContext = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        if (!(await validateAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 

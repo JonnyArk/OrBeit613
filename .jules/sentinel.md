@@ -1,0 +1,4 @@
+## YYYY-MM-DD - [Missing Authentication on Sensitive HTTP Endpoints]
+**Vulnerability:** The `generateAsset` and `distillContext` `onRequest` endpoints processed sensitive AI operations and used secret keys without checking if the requester was authenticated, allowing public unauthenticated invocation.
+**Learning:** `onRequest` endpoints are fully public by default. If they are not converted to `onCall` (which handles auth automatically), they strictly require manual token verification by extracting `request.headers.authorization` and validating it via `getAuth().verifyIdToken()`.
+**Prevention:** Always mandate explicit manual authentication checks for any `onRequest` HTTP endpoint that consumes credits, handles user data, or uses external AI services, or default to using `onCall` endpoints when interacting with authenticated clients.
