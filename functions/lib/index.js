@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -97,7 +98,22 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // Security: Validate Firebase Auth token
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+    }
+    catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return;
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,8 +149,24 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Security: Validate Firebase Auth token
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
     try {
-        const body = request.body;
+        const token = authHeader.split("Bearer ")[1];
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+    }
+    catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return;
+    }
+    try {
+        const payload = request.body.data || request.body;
+        const body = payload;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +212,24 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Security: Validate Firebase Auth token
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
     try {
-        const body = request.body;
+        const token = authHeader.split("Bearer ")[1];
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+    }
+    catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return;
+    }
+    try {
+        const payload = request.body.data || request.body;
+        const body = payload;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({

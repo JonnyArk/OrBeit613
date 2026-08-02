@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -76,7 +77,23 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // Security: Validate Firebase Auth token
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
+
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(token);
+    } catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,8 +134,25 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Security: Validate Firebase Auth token
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing token" });
+            return;
+        }
+
         try {
-            const body = request.body as AssetGenerationRequest;
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch (error) {
+            logger.warn("Authentication failed", { error });
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
+            return;
+        }
+
+        try {
+            const payload = request.body.data || request.body;
+            const body = payload as AssetGenerationRequest;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +207,25 @@ export const distillContext = onRequest(
             return;
         }
 
+        // Security: Validate Firebase Auth token
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing token" });
+            return;
+        }
+
         try {
-            const body = request.body as DistillationRequest;
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch (error) {
+            logger.warn("Authentication failed", { error });
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
+            return;
+        }
+
+        try {
+            const payload = request.body.data || request.body;
+            const body = payload as DistillationRequest;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
