@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -26,6 +27,21 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * Validates the authorization header to prevent unauthorized access.
+ * Security: Prevents unauthenticated users from consuming AI credits.
+ */
+async function verifyAuth(request: Request): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) return false;
+    try {
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -117,6 +133,11 @@ export const generateAsset = onRequest(
             return;
         }
 
+        if (!(await verifyAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -170,6 +191,11 @@ export const distillContext = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        if (!(await verifyAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 
