@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -133,6 +134,20 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // Explicit Token Validation
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+    }
+    catch (_error) {
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return;
+    }
     try {
         const body = request.body;
         // Validate required fields
@@ -178,6 +193,20 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    // Explicit Token Validation
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing token" });
+        return;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+    }
+    catch (_error) {
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
         return;
     }
     try {
