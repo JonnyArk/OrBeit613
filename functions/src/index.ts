@@ -10,10 +10,32 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TypedResponse = any;
+
+/**
+ * Verify Firebase Auth ID token from request headers
+ */
+async function verifyAuth(request: Request, response: TypedResponse): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return true;
+    } catch (_error) {
+        response.status(401).json({ error: "Invalid token" });
+        return false;
+    }
+}
 
 // AI Services
 import {
@@ -117,6 +139,9 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // Security: Require valid authentication
+        if (!(await verifyAuth(request, response))) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -172,6 +197,9 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        // Security: Require valid authentication
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as DistillationRequest;
