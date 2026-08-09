@@ -1,0 +1,3 @@
+## 2024-08-09 - Staggered Animations in Lazy Lists
+**Learning:** In Flutter, passing pre-instantiated widgets into `ListView.builder` negates its lazy-loading performance benefits. Furthermore, applying staggered index-based animation delays (e.g., `delay: i * 40ms`) inside a lazy-loaded list causes off-screen items to have massive delays when they are scrolled into view.
+**Action:** Construct an array of closures (e.g., `List<Widget Function()>`) and evaluate them dynamically inside the `itemBuilder` callback to maintain strong typing and preserve local variables. Cap the animation delay (e.g., `math.min(i, 10) * 40`) so that initial items stagger correctly but items scrolled into view appear immediately.
