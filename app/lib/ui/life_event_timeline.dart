@@ -10,6 +10,8 @@
 /// - Milestone 🏆 (Ruby)
 /// - Memory 💭 (Warm White)
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -275,7 +277,8 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                // Capping the index delay to prevent massive delays
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: math.min(index, 10) * 50))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
