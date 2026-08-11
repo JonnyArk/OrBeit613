@@ -10,10 +10,12 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import type { Response } from "express";
 
 // AI Services
 import {
@@ -26,6 +28,31 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * Validates the Firebase ID token from the authorization header.
+ *
+ * @param request - The incoming HTTP request
+ * @param response - The HTTP response object
+ * @returns True if authenticated, false otherwise
+ */
+async function verifyAuth(request: Request, response: Response): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+        return false;
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return false;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -117,6 +144,8 @@ export const generateAsset = onRequest(
             return;
         }
 
+        if (!(await verifyAuth(request, response))) return;
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -172,6 +201,8 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as DistillationRequest;
