@@ -10,10 +10,13 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
+import type { Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import type { Response } from "express";
 
 // AI Services
 import {
@@ -26,6 +29,28 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * Validates the authorization header for incoming requests.
+ * @param request - The incoming HTTP request
+ * @param response - The HTTP response object
+ * @returns A boolean indicating if the request is authorized
+ */
+async function isAuthorized(request: Request, response: Response): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+        return false;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch {
+        response.status(401).json({ error: "Unauthorized: Invalid token" });
+        return false;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,7 +101,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    if (!(await isAuthorized(request, response))) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -116,6 +143,8 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await isAuthorized(request, response))) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -172,6 +201,8 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await isAuthorized(request, response))) return;
 
         try {
             const body = request.body as DistillationRequest;
