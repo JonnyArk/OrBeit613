@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:math' as math;
 import 'package:flutter_animate/flutter_animate.dart';
 import '../domain/entities/task.dart' as domain;
 import '../providers/task_provider.dart';
@@ -237,32 +238,42 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
+    // Construct an array of closures for dynamic evaluation in ListView.builder
+    // to preserve lazy-loading performance while mixing headers and task items.
+    final items = <Widget Function()>[];
+
+    for (final entry in grouped.entries) {
+      items.add(() => _buildPriorityHeader(entry.key, entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        // Capping the index delay to prevent massive delays when items are scrolled into view
+        final int delayIndex = math.min(i, 10);
+        items.add(() => _SwipeableTaskTile(
               task: entry.value[i],
               onComplete: () => _completeTask(entry.value[i].id),
               onDelete: () => _deleteTask(entry.value[i].id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: delayIndex * 40))
+                .slideX(begin: 0.05, end: 0, duration: 300.ms));
+      }
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    if (_completedTasks.isNotEmpty) {
+      items.add(() => const SizedBox(height: 8));
+      items.add(() => _buildCompletedHeader());
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(() => _CompletedTaskTile(task: task));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return items[index]();
+      },
     );
   }
 

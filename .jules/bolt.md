@@ -1,0 +1,3 @@
+## 2024-08-13 - Optimize TaskListPanel Rendering Performance
+**Learning:** In Flutter, passing pre-instantiated widgets into `ListView` or `ListView.builder` negates its lazy-loading performance benefits. Furthermore, applying staggered index-based animation delays causes off-screen items to have massive delays when they are scrolled into view.
+**Action:** When optimizing heterogeneous lists while maintaining strong typing and preserving local variables (like index for staggered animations), construct an array of closures (`List<Widget Function()>`) and evaluate them dynamically inside the `itemBuilder` callback. Additionally, cap the delay index (e.g., `math.min(i, 10)`) so that initial items stagger correctly but items scrolled into view appear immediately.
