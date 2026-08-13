@@ -1,0 +1,3 @@
+## 2025-02-18 - Dynamic Semantics for Stateful Animated Widgets
+**Learning:** In Flutter, visual AI interface components that change state (e.g., OrBeacon switching from idle to listening) must wrap their interactive elements (`GestureDetector`) in a `Semantics` widget and compute the `label` and `hint` attributes dynamically based on the component's current state. This ensures screen readers announce the real-time context and interactions instead of just announcing an unlabeled button.
+**Action:** When creating or updating custom interactive widgets with visual states, always add a `Semantics` wrapper with dynamic `label` and `hint` strings that accurately reflect the state and available actions.
