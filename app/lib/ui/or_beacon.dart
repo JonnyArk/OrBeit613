@@ -60,27 +60,62 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    String semanticLabel;
+    String semanticHint;
+
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        semanticLabel = 'AI Voice Assistant - Idle';
+        semanticHint = 'Double tap to start listening';
+        break;
+      case VoiceStatus.listening:
+        semanticLabel = 'AI Voice Assistant - Listening';
+        semanticHint = 'Double tap to stop listening';
+        break;
+      case VoiceStatus.processing:
+        semanticLabel = 'AI Voice Assistant - Processing';
+        semanticHint = 'Please wait';
+        break;
+      case VoiceStatus.speaking:
+        semanticLabel = 'AI Voice Assistant - Speaking';
+        semanticHint = 'Double tap to stop speaking';
+        break;
+      case VoiceStatus.error:
+        semanticLabel = 'AI Voice Assistant - Error';
+        semanticHint = 'Double tap to retry';
+        break;
+      case VoiceStatus.unavailable:
+        semanticLabel = 'AI Voice Assistant - Unavailable';
+        semanticHint = 'Voice features are currently unavailable';
+        break;
+    }
+
+    return Semantics(
+      label: semanticLabel,
+      hint: semanticHint,
+      button: true,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
