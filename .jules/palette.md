@@ -1,0 +1,3 @@
+## 2024-05-24 - Dynamic Semantics for AI Interface State
+**Learning:** AI interface components (like voice beacons) that change state visually must have dynamic `Semantics` labels and hints. Static semantics are insufficient when the component transitions between listening, processing, and speaking.
+**Action:** When creating or updating interactive UI components that indicate state visually (like a voice orb), always wrap them in a `Semantics` widget and compute the `label` and `hint` attributes dynamically based on the component's current state to maintain accessibility context for screen readers.
