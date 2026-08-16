@@ -10,6 +10,8 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import type { Request } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -110,10 +112,25 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // Verify Authentication
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+            return;
+        }
+        const token = authHeader.split("Bearer ")[1];
+
+        try {
+            await getAuth().verifyIdToken(token);
+        } catch {
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
             return;
         }
 
@@ -166,10 +183,25 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // Verify Authentication
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+            return;
+        }
+        const token = authHeader.split("Bearer ")[1];
+
+        try {
+            await getAuth().verifyIdToken(token);
+        } catch {
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
             return;
         }
 
