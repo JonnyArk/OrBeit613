@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -117,7 +118,16 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce token validation to prevent unauthorized access and resource exhaustion
+        const token = request.headers.authorization?.split("Bearer ")[1];
+        if (!token) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -173,7 +183,16 @@ export const distillContext = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce token validation to prevent unauthorized access and resource exhaustion
+        const token = request.headers.authorization?.split("Bearer ")[1];
+        if (!token) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
