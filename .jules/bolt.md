@@ -1,0 +1,3 @@
+## 2025-02-23 - Flat View Models for ListView.builder Optimization
+**Learning:** Attempting to optimize a heterogeneous `ListView` to a `ListView.builder` by dynamically creating closures in an eager loop provides no performance benefit and sacrifices declarative readability. Additionally, keeping staggered animations on lazily mounted items causes visual popping when scrolling.
+**Action:** To correctly virtualize heterogeneous lists, map the data model into a flat list of items dynamically inside the build method. Apply animation logic appropriately so scrolling items do not suffer from the initial staggered delay.
