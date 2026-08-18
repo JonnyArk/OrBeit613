@@ -10,10 +10,32 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
+import type { Request } from "firebase-functions/v2/https";
+import type { Response } from "express";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+/**
+ * 🛡️ Security: Validates the Authorization header to prevent unauthorized API access.
+ * Fails securely by sending 401 and returning null if unauthenticated.
+ */
+async function requireAuth(req: Request, res: Response): Promise<string | null> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        res.status(401).json({ success: false, error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decoded.uid;
+    } catch {
+        res.status(401).json({ success: false, error: "Unauthorized" });
+        return null;
+    }
+}
 
 // AI Services
 import {
@@ -76,8 +98,11 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const userId = await requireAuth(request, response);
+        if (!userId) return;
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -117,8 +142,15 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const userId = await requireAuth(request, response);
+        if (!userId) return;
+
         try {
-            const body = request.body as AssetGenerationRequest;
+            // Handle both standard HTTP POST and Firebase httpsCallable formats
+            const body = (request.body?.data || request.body) as AssetGenerationRequest;
+
+            // Enforce authenticated identity to prevent IDOR
+            body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +205,15 @@ export const distillContext = onRequest(
             return;
         }
 
+        const userId = await requireAuth(request, response);
+        if (!userId) return;
+
         try {
-            const body = request.body as DistillationRequest;
+            // Handle both standard HTTP POST and Firebase httpsCallable formats
+            const body = (request.body?.data || request.body) as DistillationRequest;
+
+            // Enforce authenticated identity to prevent IDOR
+            body.userId = userId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
