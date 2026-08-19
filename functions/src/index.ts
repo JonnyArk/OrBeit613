@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,7 +119,16 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Missing or invalid authorization header" });
+                return;
+            }
+            const idToken = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(idToken);
             const body = request.body as AssetGenerationRequest;
+            // SECURITY: Prevent IDOR by overwriting payload userId with verified token uid
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +184,16 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Missing or invalid authorization header" });
+                return;
+            }
+            const idToken = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(idToken);
             const body = request.body as DistillationRequest;
+            // SECURITY: Prevent IDOR by overwriting payload userId with verified token uid
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
