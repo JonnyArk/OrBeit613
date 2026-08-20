@@ -183,20 +183,14 @@ export class AIManager {
     async getMonthlyUsage(): Promise<number> {
         try {
             const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateDoc = await this.db.doc(`metadata/credits/monthly/${monthKey}`).get();
 
-            const snapshot = await this.db
-                .collection(this.usageCollection)
-                .where("timestamp", ">=", monthStart)
-                .get();
+            if (aggregateDoc.exists) {
+                return aggregateDoc.data()?.totalUsed || 0;
+            }
 
-            let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data() as CreditUsageEntry;
-                total += data.creditsUsed || 0;
-            });
-
-            return total;
+            return 0;
         } catch (error) {
             logger.error("Failed to get monthly usage", { error });
             return 0;
