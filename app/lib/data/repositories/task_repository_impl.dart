@@ -5,7 +5,7 @@
 
 import 'package:drift/drift.dart';
 import '../../domain/entities/task.dart' as domain;
-import '../../domain/entities/task_repository.dart';
+import '../../domain/repositories/task_repository.dart';
 import '../database.dart';
 
 /// Drift implementation of TaskRepository

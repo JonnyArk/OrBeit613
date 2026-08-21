@@ -1,0 +1,3 @@
+## 2026-08-21 - Virtualizing heterogeneous lists with animations
+**Learning:** Attempting to build an entire list upfront in Flutter `ListView` to maintain individual item animations causes extreme regressions on large lists. Refactoring it to a lazily-loaded `ListView.builder` by flattening the heterogenous list elements prevents rendering off-screen elements. Unbounded index-based delay will hide lazily loaded items further down on scroll.
+**Action:** Flatten data structure mapping models to list items, use conditional `itemBuilder`, and bound animation delays using index caps (e.g., `(index > 10 ? 10 : index) * 40`).
