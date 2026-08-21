@@ -1,0 +1,4 @@
+## 2026-08-21 - Securing onRequest Endpoints
+**Vulnerability:** Firebase Cloud Functions using `onRequest` (v2) are exposed publicly by default and completely bypassed authentication. This allowed unauthenticated access to `creditUsage` and exposed an Insecure Direct Object Reference (IDOR) risk in `generateAsset` and `distillContext` where clients could pass any `userId` in the payload.
+**Learning:** When using `onRequest` in Firebase v2 (often required to handle Callable wrapped requests manually or expose plain HTTP), auth headers must be verified manually using `firebase-admin/auth` before processing. Additionally, user identity MUST be strictly extracted from the verified token and never trusted from the client payload.
+**Prevention:** 1) Always implement a helper to extract and verify the auth token for `onRequest` functions. 2) Strictly overwrite any `userId` field in the request body with the verified `uid` from the token.

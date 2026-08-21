@@ -10,10 +10,29 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+import type { Response } from "express";
+
+// 🛡️ Sentinel: Security helper to verify authentication and extract UID
+async function getAuthUid(req: Request, res: Response): Promise<string | null> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+        return null;
+    }
+    try {
+        const decoded = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return decoded.uid;
+    } catch (e) {
+        logger.warn("Security: Invalid auth token", { error: e });
+        res.status(401).json({ error: "Unauthorized: Invalid auth token" });
+        return null;
+    }
+}
 
 // AI Services
 import {
@@ -69,14 +88,18 @@ export const healthCheck = onRequest(async (_request, response) => {
 /**
  * Credit usage summary endpoint for monitoring AI resource consumption.
  *
- * @param _request - The incoming HTTP request
+ * @param request - The incoming HTTP request
  * @param response - The HTTP response object
  * @returns JSON response with credit usage statistics
  *
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // 🛡️ Sentinel: Enforce authentication for sensitive credit usage data
+    const authUserId = await getAuthUid(request, response);
+    if (!authUserId) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -117,8 +140,17 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce authentication and prevent IDOR
+        const authUserId = await getAuthUid(request, response);
+        if (!authUserId) return; // Response sent by helper
+
         try {
-            const body = request.body as AssetGenerationRequest;
+            // Handle both raw HTTP and Callable protocol wrapping
+            const rawBody = request.body.data ? request.body.data : request.body;
+            const body = rawBody as AssetGenerationRequest;
+
+            // 🛡️ Sentinel: Strictly overwrite payload userId with authenticated UID
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +205,17 @@ export const distillContext = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce authentication and prevent IDOR
+        const authUserId = await getAuthUid(request, response);
+        if (!authUserId) return; // Response sent by helper
+
         try {
-            const body = request.body as DistillationRequest;
+            // Handle both raw HTTP and Callable protocol wrapping
+            const rawBody = request.body.data ? request.body.data : request.body;
+            const body = rawBody as DistillationRequest;
+
+            // 🛡️ Sentinel: Strictly overwrite payload userId with authenticated UID
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
