@@ -58,15 +58,36 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
     };
   }
 
+  String get _semanticsLabel {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'AI Assistant: Idle. Double tap to activate voice interaction.';
+      case VoiceStatus.listening:
+        return 'AI Assistant: Listening. Double tap to stop.';
+      case VoiceStatus.processing:
+        return 'AI Assistant: Processing your request.';
+      case VoiceStatus.speaking:
+        return 'AI Assistant: Speaking. Double tap to interrupt.';
+      case VoiceStatus.error:
+        return 'AI Assistant: Error occurred.';
+      case VoiceStatus.unavailable:
+        return 'AI Assistant: Voice services unavailable.';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
+    return Semantics(
+      label: _semanticsLabel,
+      button: true,
+      liveRegion: true,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
           alignment: Alignment.center,
           children: [
             // Outer glow ring
@@ -83,6 +104,7 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
           ],
         ),
       ),
+    ),
     );
   }
 
