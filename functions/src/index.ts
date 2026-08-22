@@ -10,9 +10,11 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+import type { Request, Response } from "express";
 import * as logger from "firebase-functions/logger";
 
 // AI Services
@@ -26,6 +28,27 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * 🛡️ Sentinel: Verifies the Authorization bearer token to protect endpoints.
+ * Missing authentication on sensitive endpoints exposes them to abuse.
+ */
+async function verifyAuth(request: Request, response: Response): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.warn("Authentication failed", { error });
+        response.status(401).json({ error: "Unauthorized" });
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,8 +99,11 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const authUserId = await verifyAuth(request as Request, response as Response);
+        if (!authUserId) return;
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +144,13 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authUserId = await verifyAuth(request as Request, response as Response);
+            if (!authUserId) return;
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: Prevent IDOR by strictly overwriting client-provided user ID
+            // with the verified identity extracted from the server-side authentication token.
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +206,13 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authUserId = await verifyAuth(request as Request, response as Response);
+            if (!authUserId) return;
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: Prevent IDOR by strictly overwriting client-provided user ID
+            // with the verified identity extracted from the server-side authentication token.
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
