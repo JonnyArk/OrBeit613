@@ -60,27 +60,39 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    String semanticLabel = "Or Assistant. Status: ${_voiceStatus.name}.";
+    String semanticHint = _voiceStatus == VoiceStatus.listening
+        ? "Double tap to stop listening"
+        : _voiceStatus == VoiceStatus.speaking
+            ? "Double tap to stop speaking"
+            : "Double tap to activate voice command";
+
+    return Semantics(
+      label: semanticLabel,
+      hint: semanticHint,
+      button: true,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
