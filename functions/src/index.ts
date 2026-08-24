@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,6 +119,16 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication on public onRequest endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing auth token" });
+                return;
+            }
+
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -174,6 +185,16 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication on public onRequest endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing auth token" });
+                return;
+            }
+
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
