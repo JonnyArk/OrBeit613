@@ -58,12 +58,46 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
     };
   }
 
+  String get _semanticLabel {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'AI Beacon, idle';
+      case VoiceStatus.listening:
+        return 'AI Beacon, listening';
+      case VoiceStatus.processing:
+        return 'AI Beacon, processing';
+      case VoiceStatus.speaking:
+        return 'AI Beacon, speaking';
+      case VoiceStatus.error:
+        return 'AI Beacon, error';
+      case VoiceStatus.unavailable:
+        return 'AI Beacon, unavailable';
+    }
+  }
+
+  String get _semanticHint {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+      case VoiceStatus.error:
+        return 'Double tap to activate voice commands';
+      case VoiceStatus.listening:
+      case VoiceStatus.speaking:
+        return 'Double tap to stop';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
+    return Semantics(
+      button: true,
+      label: _semanticLabel,
+      hint: _semanticHint,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
         width: widget.size + 24, // Extra space for glow
         height: widget.size + 24,
         child: Stack(
@@ -82,6 +116,7 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
               _buildPartialText(),
           ],
         ),
+      ),
       ),
     );
   }
