@@ -265,6 +265,9 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               event.occurredAt,
             );
 
+        // ⚡ Bolt: Cap animation delay multiplier to prevent lazily loaded items from staying invisible for seconds on scroll
+        final delayMultiplier = index > 10 ? 10 : index;
+
         return Column(
           children: [
             if (showDateHeader) _buildDateHeader(event.occurredAt),
@@ -275,7 +278,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: delayMultiplier * 50))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
