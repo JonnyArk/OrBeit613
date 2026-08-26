@@ -1,0 +1,3 @@
+## 2026-08-26 - Refactoring eagerly built ListViews
+**Learning:** In Flutter, eagerly building a `ListView` with a mix of different widgets causes O(N) upfront allocations, neutralizing the benefits of lazy loading.
+**Action:** When mapping heterogeneous data models for `ListView.builder`, use Dart 3 records (e.g., `({String type, dynamic data, int index})`) to create a flat list of items. Additionally, always cap unbounded index-based animation delays (e.g., `delay: Duration(milliseconds: (i > 10 ? 10 : i) * 40)`) to prevent lazily-loaded items further down from staying invisible upon scrolling.
