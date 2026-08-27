@@ -1,0 +1,3 @@
+## 2026-08-27 - Dynamic Accessibility for AI Voice Components
+**Learning:** AI interface components (like the OrBeacon voice assistant) that rely heavily on visual cues (e.g., color and animation) for state changes become completely opaque to screen readers if not paired with dynamic semantic labels. Static ARIA/Semantics labels are insufficient for multi-state AI components.
+**Action:** Always wrap AI interaction elements in dynamic `Semantics` widgets that update their `label` and `hint` properties synchronously with the component's visual state changes (idle, listening, processing, speaking).
