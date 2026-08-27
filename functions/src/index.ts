@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -76,8 +77,18 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // 🛡️ Sentinel: Verify authentication token manually for v2 onRequest endpoints
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
+        const idToken = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(idToken);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -117,7 +128,17 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Verify authentication token manually for v2 onRequest endpoints
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
+            const idToken = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(idToken);
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -173,7 +194,17 @@ export const distillContext = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Verify authentication token manually for v2 onRequest endpoints
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
+            const idToken = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(idToken);
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
