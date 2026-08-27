@@ -1,0 +1,3 @@
+## 2024-05-17 - Flutter ListView Performance
+**Learning:** In Flutter, passing pre-instantiated widgets into `ListView` or `ListView.builder` by eagerly generating them with lists/maps is an anti-pattern. This causes O(N) upfront allocations and defeats the purpose of lazy loading, leading to poor scrolling performance on long lists.
+**Action:** When virtualizing heterogeneous lists with `ListView.builder`, map the data model into a flat list of Dart 3 records (e.g. `({String type, dynamic data, int index})`) and dynamically evaluate them inside the `itemBuilder` callback. Also, always cap index-based animation multipliers to prevent delays on items lazily mounted further down the list.
