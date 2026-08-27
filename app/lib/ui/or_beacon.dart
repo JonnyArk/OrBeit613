@@ -31,11 +31,7 @@ class OrBeacon extends ConsumerStatefulWidget {
   /// Called when the Or has processed a voice command
   final void Function(String command)? onVoiceCommand;
 
-  const OrBeacon({
-    super.key,
-    this.size = 64,
-    this.onVoiceCommand,
-  });
+  const OrBeacon({super.key, this.size = 64, this.onVoiceCommand});
 
   @override
   ConsumerState<OrBeacon> createState() => _OrBeaconState();
@@ -60,27 +56,62 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    String semanticsLabel;
+    String semanticsHint;
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        semanticsLabel = 'Or Beacon AI Assistant';
+        semanticsHint = 'Double tap to start listening';
+        break;
+      case VoiceStatus.listening:
+        semanticsLabel = 'Or Beacon Listening';
+        semanticsHint = 'Double tap to stop listening';
+        break;
+      case VoiceStatus.processing:
+        semanticsLabel = 'Or Beacon Processing';
+        semanticsHint = 'Please wait';
+        break;
+      case VoiceStatus.speaking:
+        semanticsLabel = 'Or Beacon Speaking';
+        semanticsHint = 'Double tap to stop speaking';
+        break;
+      case VoiceStatus.error:
+        semanticsLabel = 'Or Beacon Error';
+        semanticsHint = 'Double tap to try again';
+        break;
+      case VoiceStatus.unavailable:
+        semanticsLabel = 'Or Beacon Unavailable';
+        semanticsHint = 'Microphone not available';
+        break;
+    }
+
+    return Semantics(
+      label: semanticsLabel,
+      hint: semanticsHint,
+      button: true,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening &&
+                  _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
@@ -89,19 +120,19 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
   /// The outer glow ring — soft pulsing halo
   Widget _buildGlowRing() {
     return Container(
-      width: widget.size + 20,
-      height: widget.size + 20,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: _glowColor.withAlpha(60),
-            blurRadius: 20,
-            spreadRadius: 5,
+          width: widget.size + 20,
+          height: widget.size + 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: _glowColor.withAlpha(60),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
-        ],
-      ),
-    )
+        )
         .animate(onPlay: (controller) => controller.repeat(reverse: true))
         .scaleXY(begin: 0.9, end: 1.1, duration: 2000.ms)
         .fadeIn(duration: 1000.ms);
@@ -110,34 +141,34 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
   /// The main orb — the Or's visual core
   Widget _buildOrb() {
     return Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            _coreColor,
-            _coreColor.withAlpha(180),
-            _glowColor.withAlpha(100),
-          ],
-          stops: const [0.0, 0.6, 1.0],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _glowColor.withAlpha(120),
-            blurRadius: 15,
-            spreadRadius: 2,
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                _coreColor,
+                _coreColor.withAlpha(180),
+                _glowColor.withAlpha(100),
+              ],
+              stops: const [0.0, 0.6, 1.0],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _glowColor.withAlpha(120),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          _statusIcon,
-          color: Colors.white.withAlpha(220),
-          size: widget.size * 0.4,
-        ),
-      ),
-    )
+          child: Center(
+            child: Icon(
+              _statusIcon,
+              color: Colors.white.withAlpha(220),
+              size: widget.size * 0.4,
+            ),
+          ),
+        )
         .animate(onPlay: (controller) => controller.repeat(reverse: true))
         .scaleXY(
           begin: 0.95,
@@ -152,16 +183,16 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
       alignment: Alignment.center,
       children: List.generate(3, (i) {
         return Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFFD4AF37).withAlpha(80),
-              width: 2,
-            ),
-          ),
-        )
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withAlpha(80),
+                  width: 2,
+                ),
+              ),
+            )
             .animate(
               onPlay: (controller) => controller.repeat(),
               delay: Duration(milliseconds: i * 400),
