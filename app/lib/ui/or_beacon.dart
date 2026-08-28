@@ -60,27 +60,32 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    return Semantics(
+      label: _semanticsLabel,
+      hint: _semanticsHint,
+      button: true,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
@@ -247,6 +252,38 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
   void _handleLongPress() {
     // Could show Or's recent insights or settings
     // For now, provide haptic feedback
+  }
+
+  // ── Semantic State Mappings ───────────────────────────────
+
+  String get _semanticsLabel {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'OrBeacon AI Assistant';
+      case VoiceStatus.listening:
+        return 'Listening for voice command';
+      case VoiceStatus.processing:
+        return 'Processing command';
+      case VoiceStatus.speaking:
+        return 'OrBeacon is speaking';
+      case VoiceStatus.error:
+        return 'Voice command error';
+      case VoiceStatus.unavailable:
+        return 'Voice assistant unavailable';
+    }
+  }
+
+  String get _semanticsHint {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'Double tap to start listening, long press for options';
+      case VoiceStatus.listening:
+        return 'Double tap to stop listening';
+      case VoiceStatus.speaking:
+        return 'Double tap to stop speaking';
+      default:
+        return '';
+    }
   }
 
   // ── Visual State Mappings ─────────────────────────────────
