@@ -1,0 +1,4 @@
+## 2026-08-28 - Unauthenticated V2 onRequest Cloud Functions
+**Vulnerability:** Firebase v2 `onRequest` Cloud Functions in `functions/src/index.ts` (such as `generateAsset`, `distillContext`, and `creditUsage`) were completely public and unauthenticated, allowing anyone to invoke cost-incurring AI generation endpoints and view sensitive credit usage data.
+**Learning:** In Firebase Cloud Functions v2, `onRequest` endpoints do not automatically enforce authentication. This can easily lead to unauthorized access or abuse, especially when endpoints interact with expensive APIs like Google AI Ultra.
+**Prevention:** Always manually extract the `Authorization` header and verify the bearer token using `getAuth().verifyIdToken()` from `firebase-admin/auth` for any `onRequest` endpoint that should be secured, or consider using `onCall` functions which automatically include auth context.
