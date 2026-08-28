@@ -10,10 +10,28 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+/**
+ * 🛡️ Sentinel: Helper function to enforce authentication on public onRequest endpoints.
+ * This prevents unauthorized access and abuse of cost-incurring endpoints.
+ */
+async function authenticate(request: Request): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return false;
+    }
+    try {
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 // AI Services
 import {
@@ -76,8 +94,14 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        // 🛡️ Sentinel: Enforce authentication to prevent unauthorized access to sensitive usage data
+        if (!(await authenticate(request))) {
+            response.status(401).json({ success: false, error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,6 +142,12 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication to prevent abuse of cost-incurring AI endpoints
+            if (!(await authenticate(request))) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -174,6 +204,12 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication to prevent abuse of cost-incurring AI endpoints
+            if (!(await authenticate(request))) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
