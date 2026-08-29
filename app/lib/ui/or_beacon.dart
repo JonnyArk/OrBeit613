@@ -60,30 +60,67 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    return Semantics(
+      button: true,
+      label: _semanticLabel,
+      hint: _semanticHint,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String get _semanticLabel {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'OrBeit AI Assistant, idle';
+      case VoiceStatus.listening:
+        return 'OrBeit AI Assistant, listening';
+      case VoiceStatus.processing:
+        return 'OrBeit AI Assistant, processing';
+      case VoiceStatus.speaking:
+        return 'OrBeit AI Assistant, speaking';
+      case VoiceStatus.error:
+        return 'OrBeit AI Assistant, error state';
+      case VoiceStatus.unavailable:
+        return 'OrBeit AI Assistant, unavailable';
+    }
+  }
+
+  String get _semanticHint {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'Double tap to start voice interaction';
+      case VoiceStatus.listening:
+        return 'Double tap to stop listening';
+      case VoiceStatus.processing:
+        return 'Please wait while processing';
+      case VoiceStatus.speaking:
+        return 'Double tap to interrupt';
+      default:
+        return '';
+    }
   }
 
   /// The outer glow ring — soft pulsing halo
