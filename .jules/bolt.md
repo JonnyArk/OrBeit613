@@ -1,0 +1,3 @@
+## 2026-08-29 - Optimize heterogeneous Flutter ListViews
+**Learning:** Eagerly building a Flutter `ListView` with nested loops and a large number of items can cause O(N) upfront allocations, degrading performance. Additionally, unbounded index-based animation delays (e.g., `delay: Duration(milliseconds: i * 40)`) on lazily-loaded items will cause off-screen items to stay invisible for several seconds upon scrolling.
+**Action:** When refactoring to a lazy-loaded `ListView.builder`, use Dart 3 records (e.g., `({String type, dynamic data, int index})`) to map heterogeneous data models into a flat list of items dynamically. Always cap the index multiplier (e.g., `(i > 10 ? 10 : i) * 40`) for staggered animations to preserve a smooth scrolling experience.
