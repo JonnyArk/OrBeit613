@@ -237,32 +237,56 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
+    // ⚡ Bolt: Mapped heterogeneous data model to flat list for lazy-loading ListView.builder
+    // Avoids O(N) upfront allocations for large lists
+    final items = <({String type, dynamic data, int index})>[];
+    for (final entry in grouped.entries) {
+      items.add((type: 'header', data: entry, index: 0));
+      for (var i = 0; i < entry.value.length; i++) {
+        items.add((type: 'task', data: entry.value[i], index: i));
+      }
+    }
+    if (_completedTasks.isNotEmpty) {
+      items.add((type: 'completed_space', data: null, index: 0));
+      items.add((type: 'completed_header', data: null, index: 0));
+      if (_showCompleted) {
+        for (var i = 0; i < _completedTasks.length; i++) {
+          items.add((type: 'completed_task', data: _completedTasks[i], index: i));
+        }
+      }
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        switch (item.type) {
+          case 'header':
+            final entry = item.data as MapEntry<domain.TaskPriority, List<domain.Task>>;
+            return _buildPriorityHeader(entry.key, entry.value.length);
+          case 'task':
+            final task = item.data as domain.Task;
+            final i = item.index;
+            return _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+                // ⚡ Bolt: Cap animation delay multiplier to prevent off-screen items from popping in late
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: (i > 10 ? 10 : i) * 40))
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case 'completed_space':
+            return const SizedBox(height: 8);
+          case 'completed_header':
+            return _buildCompletedHeader();
+          case 'completed_task':
+            return _CompletedTaskTile(task: item.data as domain.Task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 
