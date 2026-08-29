@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -114,6 +115,22 @@ export const generateAsset = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Enforce authentication to protect AI resources
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch (error) {
+            logger.warn("Unauthorized access attempt", { error });
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 
