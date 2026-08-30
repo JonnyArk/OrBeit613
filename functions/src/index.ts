@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -117,6 +118,21 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Manually enforce authentication on v2 onRequest endpoint to protect credit usage
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
 
@@ -170,6 +186,21 @@ export const distillContext = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Manually enforce authentication on v2 onRequest endpoint to protect credit usage
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const token = authHeader.split("Bearer ")[1];
+            await getAuth().verifyIdToken(token);
+        } catch {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 
