@@ -1,0 +1,4 @@
+## 2026-09-01 - Firebase v2 `onRequest` Missing Default Authentication
+**Vulnerability:** Firebase v2 `onRequest` HTTP endpoints (like `generateAsset`, `distillContext`, `creditUsage`) did not enforce user authentication, allowing any public request to consume paid AI credits via Google AI Ultra and Google Cloud services.
+**Learning:** Unlike Firebase Callable functions (`onCall`), HTTP functions (`onRequest`) in Firebase v2 do not automatically check or enforce Firebase Authentication. The lack of default security on these endpoints created a critical risk of unauthorized access and resource exhaustion.
+**Prevention:** Always manually extract the `Authorization` header and verify the Bearer token using `getAuth().verifyIdToken()` from `firebase-admin/auth` in all `onRequest` endpoints that handle sensitive operations or consume paid resources.
