@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -117,8 +118,24 @@ export const generateAsset = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce authentication on sensitive AI endpoints
+        const authHeader = request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing token" });
+            return;
+        }
+
+        let decodedToken;
+        try {
+            decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        } catch (_error) {
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = decodedToken.uid; // 🛡️ Sentinel: Prevent IDOR by using verified identity
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +190,24 @@ export const distillContext = onRequest(
             return;
         }
 
+        // 🛡️ Sentinel: Enforce authentication on sensitive AI endpoints
+        const authHeader = request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized: Missing token" });
+            return;
+        }
+
+        let decodedToken;
+        try {
+            decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        } catch (_error) {
+            response.status(401).json({ error: "Unauthorized: Invalid token" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = decodedToken.uid; // 🛡️ Sentinel: Prevent IDOR by using verified identity
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
