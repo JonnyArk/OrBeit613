@@ -1,0 +1,3 @@
+## 2026-09-02 - Eager ListView to ListView.builder for Heterogeneous Lists
+**Learning:** In Flutter, eagerly building an array of pre-instantiated widgets into ListView defeats lazy-loading. Attempting to optimize this by building an array of closures is an anti-pattern. Instead, use Dart 3 records to create a flat list of items and evaluate them dynamically in the builder. Furthermore, unbounded index-based delays can cause invisible widgets on scroll.
+**Action:** When mapping heterogeneous data models for ListView.builder, use Dart 3 records (e.g., `({String type, dynamic data, int index})`). Also cap the index multiplier (e.g., `(i > 10 ? 10 : i) * 40`) to preserve a smooth scroll experience.
