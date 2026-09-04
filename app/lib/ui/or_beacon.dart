@@ -60,27 +60,32 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    return Semantics(
+      button: true,
+      label: _semanticsLabel,
+      hint: _semanticsHint,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
@@ -314,6 +319,36 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
         return Colors.red;
       default:
         return Colors.transparent;
+    }
+  }
+
+  String get _semanticsLabel {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'AI Assistant';
+      case VoiceStatus.listening:
+        return 'Listening to voice command';
+      case VoiceStatus.processing:
+        return 'Processing command';
+      case VoiceStatus.speaking:
+        return 'AI Assistant speaking';
+      case VoiceStatus.error:
+        return 'AI Assistant error';
+      case VoiceStatus.unavailable:
+        return 'Voice interaction unavailable';
+    }
+  }
+
+  String? get _semanticsHint {
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        return 'activate voice interaction';
+      case VoiceStatus.listening:
+        return 'stop listening';
+      case VoiceStatus.speaking:
+        return 'stop speaking';
+      default:
+        return null;
     }
   }
 }

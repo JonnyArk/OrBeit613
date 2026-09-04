@@ -1,0 +1,3 @@
+## 2026-09-04 - Dynamic Semantics for Stateful AI Beacons
+**Learning:** In Flutter, AI interface components (like voice beacons) that change visual state must dynamically update their Semantics properties (such as label and hint) based on the component's state to maintain proper accessibility context for screen readers. Hardcoding interaction verbs like 'Double tap to' in the hint results in redundant announcements.
+**Action:** Always map complex widget states to dynamic `Semantics` labels and hints without hardcoding action verbs, and wrap custom interactive elements (like icon-only `GestureDetector`s) with `Semantics(button: true)`.
