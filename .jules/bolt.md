@@ -1,0 +1,3 @@
+## 2026-09-04 - Virtualization of Heterogeneous Lists in Flutter
+**Learning:** In Flutter, using standard ListView for long heterogeneous lists causes O(N) upfront allocations. Attempting to optimize with an array of closures is an anti-pattern. While initial staggered animations on lazily mounted items cause visual popping, stripping them entirely introduces regressions; cap stagger delay conditionally based on list position.
+**Action:** Map the data model into a flat list of Dart 3 records (e.g., `({String type, dynamic data})`) and dynamically evaluate them inside the `itemBuilder` callback. Cap stagger animations for visible initial indices.
