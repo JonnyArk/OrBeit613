@@ -60,10 +60,36 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
+    String semanticLabel;
+
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        semanticLabel = 'AI Assistant Beacon, idle';
+        break;
+      case VoiceStatus.listening:
+        semanticLabel = 'AI Assistant Beacon, listening';
+        break;
+      case VoiceStatus.processing:
+        semanticLabel = 'AI Assistant Beacon, processing';
+        break;
+      case VoiceStatus.speaking:
+        semanticLabel = 'AI Assistant Beacon, speaking';
+        break;
+      case VoiceStatus.error:
+        semanticLabel = 'AI Assistant Beacon, error state';
+        break;
+      case VoiceStatus.unavailable:
+        semanticLabel = 'AI Assistant Beacon, unavailable';
+        break;
+    }
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
         width: widget.size + 24, // Extra space for glow
         height: widget.size + 24,
         child: Stack(
@@ -83,7 +109,7 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
           ],
         ),
       ),
-    );
+    ));
   }
 
   /// The outer glow ring — soft pulsing halo
