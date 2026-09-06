@@ -1,0 +1,3 @@
+## 2024-05-18 - Unbounded Animation Delays in Lazy Lists
+**Learning:** In Flutter, attaching unbounded stagger animations (where delay = index * delayMs) to items within a `ListView.builder` causes severe visual popping during scrolling. Because `ListView.builder` lazy-loads items, an item with index 20 will be mounted long after the list initial load, but its animation will still be delayed by `20 * delayMs`, resulting in a jarring pop-in effect.
+**Action:** Always cap the stagger delay conditionally based on the list position (e.g., `index < 10`) when animating lazily mounted list items, so subsequent items appear immediately during scrolling.

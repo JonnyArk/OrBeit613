@@ -268,6 +268,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
         return Column(
           children: [
             if (showDateHeader) _buildDateHeader(event.occurredAt),
+            // ⚡ Bolt: Cap stagger delay to first 10 items to prevent visual popping on lazy-loaded items during scrolling.
             _TimelineEventCard(
               event: event,
               isFirst: isFirst,
@@ -275,7 +276,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index < 10 ? index * 50 : 0))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
