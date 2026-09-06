@@ -1,0 +1,4 @@
+## 2026-09-06 - Securing Unauthenticated Firebase HTTP Endpoints
+**Vulnerability:** HTTP Cloud Functions (`onRequest`) in Firebase Functions v2 were missing explicit authentication and exposing sensitive operations (like context distillation and credit usage). The endpoints relied on user-provided IDs in the request body, leading to potential Insecure Direct Object Reference (IDOR) vulnerabilities.
+**Learning:** Firebase v2 `onRequest` endpoints do not automatically enforce authentication. Relying on `request.body.userId` is unsafe because an attacker can impersonate other users if the endpoint doesn't verify the user's identity.
+**Prevention:** Always extract and verify the `Authorization` header (`Bearer token`) using `getAuth().verifyIdToken()` in `onRequest` endpoints. Crucially, overwrite any user-provided IDs in the request payload with the verified identity (`uid`) from the token to prevent IDOR attacks.

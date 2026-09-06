@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -47,7 +48,7 @@ setGlobalOptions({
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/healthCheck
  * // Response: { "status": "healthy", "project": "orbeit-613", "timestamp": "..." }
  */
-export const healthCheck = onRequest(async (_request, response) => {
+export const healthCheck = onRequest(async (_request: Request, response) => {
     logger.info("Health check requested", { structuredData: true });
 
     const aiManager = getAIManager();
@@ -76,8 +77,16 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (_request: Request, response) => {
     try {
+        // 🛡️ Sentinel: Enforce authentication on sensitive endpoint
+        const authHeader = _request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
+            response.status(401).json({ success: false, error: "Unauthorized" });
+            return;
+        }
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -110,7 +119,7 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -118,7 +127,18 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication on sensitive endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ success: false, error: "Unauthorized" });
+                return;
+            }
+            const decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+
             const body = request.body as AssetGenerationRequest;
+
+            // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided ID with verified token UID
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -166,7 +186,7 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -174,7 +194,18 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication on sensitive endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ success: false, error: "Unauthorized" });
+                return;
+            }
+            const decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+
             const body = request.body as DistillationRequest;
+
+            // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided ID with verified token UID
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
