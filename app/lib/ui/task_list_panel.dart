@@ -237,32 +237,57 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
+    // ⚡ Bolt: Flatten data into Dart 3 records for O(1) lazy rendering to avoid O(N) widget allocations
+    final listItems = <({String type, dynamic data, int index})>[];
+
+    for (final entry in grouped.entries) {
+      listItems.add((type: 'header', data: {'priority': entry.key, 'count': entry.value.length}, index: 0));
+      for (var i = 0; i < entry.value.length; i++) {
+        listItems.add((type: 'task', data: entry.value[i], index: i));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      listItems.add((type: 'completed_spacing', data: null, index: 0));
+      listItems.add((type: 'completed_header', data: null, index: 0));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          listItems.add((type: 'completed_task', data: task, index: 0));
+        }
+      }
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: listItems.length,
+      itemBuilder: (context, index) {
+        final item = listItems[index];
+
+        switch (item.type) {
+          case 'header':
+            final data = item.data as Map<String, dynamic>;
+            return _buildPriorityHeader(data['priority'] as domain.TaskPriority, data['count'] as int);
+          case 'task':
+            final task = item.data as domain.Task;
+            final i = item.index;
+            return _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i < 10 ? i * 40 : 0))
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case 'completed_spacing':
+            return const SizedBox(height: 8);
+          case 'completed_header':
+            return _buildCompletedHeader();
+          case 'completed_task':
+            return _CompletedTaskTile(task: item.data as domain.Task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 

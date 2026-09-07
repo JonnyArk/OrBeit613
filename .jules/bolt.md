@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimize ListView mapping to avoid O(N) allocations in Flutter
+**Learning:** Using `ListView` with a large list of heterogenous items or eager construction in Dart can cause performance issues and break virtualization. The correct approach for virtualized heterogenous lists is to flatten the items into Dart 3 records, and then build them lazily using `ListView.builder` in its `itemBuilder` callback. This prevents O(N) upfront widget allocations.
+**Action:** When rendering heterogenous lists, flatten the data structure using Dart 3 records and use `ListView.builder` instead of `ListView` or generating all widgets upfront.
