@@ -1,0 +1,3 @@
+## 2024-05-24 - Dart 3 Records for Heterogeneous ListView.builder Optimization
+**Learning:** In Flutter, mapping heterogeneous data models for `ListView.builder` can be elegantly handled using Dart 3 records (e.g., `({String type, dynamic data, int index})`). This flat item list avoids O(N) upfront allocations for widget arrays, providing a clean, idiomatic way to handle varied items without extra boilerplate classes, thus preserving lazy-loading performance. Also, it's critical to conditionally cap stagger animation delays (`index < 10`) for virtualized items to avoid visual popping on fast scrolling.
+**Action:** Always map varied item data into a flat list of Dart 3 records before returning `ListView.builder` for virtualized rendering of complex lists.

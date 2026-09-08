@@ -27,14 +27,15 @@ class BuildingComponent extends PositionComponent with TapCallbacks {
   Sprite? _sprite;
   bool _spriteLoaded = false;
 
-  BuildingComponent({required this.building}) : super(
-    size: Vector2(buildingWidth, buildingHeight),
-    anchor: Anchor.bottomCenter,
-  ) {
+  BuildingComponent({required this.building})
+    : super(
+        size: Vector2(buildingWidth, buildingHeight),
+        anchor: Anchor.bottomCenter,
+      ) {
     // Convert grid coordinates to isometric screen position
     final isoX = (building.x - building.y) * 32.0;
     final isoY = (building.x + building.y) * 16.0;
-    
+
     position = Vector2(isoX, isoY);
   }
 
@@ -43,10 +44,14 @@ class BuildingComponent extends PositionComponent with TapCallbacks {
     // Determine sprite path based on building type
     String spritePath;
     final type = building.type.toLowerCase();
-    
-    if (type.contains('house') || type.contains('cottage') || type.contains('mansion')) {
+
+    if (type.contains('house') ||
+        type.contains('cottage') ||
+        type.contains('mansion')) {
       spritePath = 'sprites/house.png';
-    } else if (type.contains('well') || type.contains('silo') || type.contains('barn')) {
+    } else if (type.contains('well') ||
+        type.contains('silo') ||
+        type.contains('barn')) {
       spritePath = 'sprites/well.png';
     } else if (type.contains('sanctum') || type.contains('windmill')) {
       spritePath = 'sprites/sanctum.png';
@@ -121,7 +126,7 @@ class BuildingComponent extends PositionComponent with TapCallbacks {
       ..lineTo(w * 0.9, h * 0.42)
       ..lineTo(w * 0.1, h * 0.42)
       ..close();
-    
+
     canvas.drawPath(roofPath, Paint()..color = roofColor);
     canvas.drawPath(
       roofPath,
@@ -150,9 +155,12 @@ class BuildingComponent extends PositionComponent with TapCallbacks {
 
   @override
   void onTapDown(TapDownEvent event) {
-    debugPrint('Tapped on building: ${building.type} at (${building.x}, ${building.y})');
+    debugPrint(
+      'Tapped on building: ${building.type} at (${building.x}, ${building.y})',
+    );
   }
 
   @override
-  String toString() => 'BuildingComponent(${building.type} at ${building.x},${building.y})';
+  String toString() =>
+      'BuildingComponent(${building.type} at ${building.x},${building.y})';
 }

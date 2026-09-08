@@ -18,8 +18,7 @@ import 'auth_service.dart';
 class AuthServiceImpl implements AuthService {
   final FirebaseAuth _auth;
 
-  AuthServiceImpl({FirebaseAuth? auth})
-      : _auth = auth ?? FirebaseAuth.instance;
+  AuthServiceImpl({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
   @override
   AuthState? get currentUser {
