@@ -56,9 +56,9 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
 
   @override
   Future<List<LifeEvent>> getAllEvents() async {
-    final rows = await (_database.select(_database.lifeEvents)
-      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]))
-      .get();
+    final rows = await (_database.select(
+      _database.lifeEvents,
+    )..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])).get();
     return rows.map((row) => _toDomain(row)).toList();
   }
 
@@ -75,9 +75,11 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
   @override
   Future<List<LifeEvent>> getEventsInRange(DateTime start, DateTime end) async {
     final query = _database.select(_database.lifeEvents)
-      ..where((t) => 
-        t.occurredAt.isBiggerOrEqualValue(start) & 
-        t.occurredAt.isSmallerThanValue(end))
+      ..where(
+        (t) =>
+            t.occurredAt.isBiggerOrEqualValue(start) &
+            t.occurredAt.isSmallerThanValue(end),
+      )
       ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]);
     final rows = await query.get();
     return rows.map((row) => _toDomain(row)).toList();
@@ -92,16 +94,18 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
     required DateTime occurredAt,
     Map<String, dynamic>? metadata,
   }) async {
-    final id = await _database.into(_database.lifeEvents).insert(
-      LifeEventsCompanion.insert(
-        eventType: _typeToString(eventType),
-        title: title,
-        description: Value(description),
-        locationLabel: Value(locationLabel),
-        occurredAt: occurredAt,
-        metadata: Value(metadata?.toString()),
-      ),
-    );
+    final id = await _database
+        .into(_database.lifeEvents)
+        .insert(
+          LifeEventsCompanion.insert(
+            eventType: _typeToString(eventType),
+            title: title,
+            description: Value(description),
+            locationLabel: Value(locationLabel),
+            occurredAt: occurredAt,
+            metadata: Value(metadata?.toString()),
+          ),
+        );
 
     return LifeEvent(
       id: id,
@@ -117,9 +121,9 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
 
   @override
   Future<bool> deleteEvent(int id) async {
-    final count = await (_database.delete(_database.lifeEvents)
-          ..where((t) => t.id.equals(id)))
-        .go();
+    final count = await (_database.delete(
+      _database.lifeEvents,
+    )..where((t) => t.id.equals(id))).go();
     return count > 0;
   }
 
@@ -137,19 +141,27 @@ class LifeEventRepositoryImpl implements LifeEventRepository {
 
   String _typeToString(LifeEventType type) {
     switch (type) {
-      case LifeEventType.purchase: return 'purchase';
-      case LifeEventType.appointment: return 'appointment';
-      case LifeEventType.milestone: return 'milestone';
-      case LifeEventType.memory: return 'memory';
+      case LifeEventType.purchase:
+        return 'purchase';
+      case LifeEventType.appointment:
+        return 'appointment';
+      case LifeEventType.milestone:
+        return 'milestone';
+      case LifeEventType.memory:
+        return 'memory';
     }
   }
 
   LifeEventType _stringToType(String type) {
     switch (type) {
-      case 'purchase': return LifeEventType.purchase;
-      case 'appointment': return LifeEventType.appointment;
-      case 'milestone': return LifeEventType.milestone;
-      default: return LifeEventType.memory;
+      case 'purchase':
+        return LifeEventType.purchase;
+      case 'appointment':
+        return LifeEventType.appointment;
+      case 'milestone':
+        return LifeEventType.milestone;
+      default:
+        return LifeEventType.memory;
     }
   }
 }

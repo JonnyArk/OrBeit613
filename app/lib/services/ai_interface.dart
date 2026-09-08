@@ -41,11 +41,11 @@ class AssetGenerationRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'assetType': assetType,
-        'context': context,
-        'size': size,
-        if (userId != null) 'userId': userId,
-      };
+    'assetType': assetType,
+    'context': context,
+    'size': size,
+    if (userId != null) 'userId': userId,
+  };
 }
 
 /// Response from asset generation
@@ -96,11 +96,11 @@ class ContextDistillationRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'rawData': rawData,
-        'dataType': dataType,
-        if (spatialHint != null) 'spatialHint': spatialHint,
-        if (occurredAt != null) 'occurredAt': occurredAt!.toIso8601String(),
-      };
+    'rawData': rawData,
+    'dataType': dataType,
+    if (spatialHint != null) 'spatialHint': spatialHint,
+    if (occurredAt != null) 'occurredAt': occurredAt!.toIso8601String(),
+  };
 }
 
 /// Distilled Life Event response
@@ -225,10 +225,10 @@ class AIServiceException implements Exception {
 
   /// Whether this error is transient and should be retried
   bool get isRetryable => [
-        AIErrorType.network,
-        AIErrorType.timeout,
-        AIErrorType.serverError,
-      ].contains(errorType);
+    AIErrorType.network,
+    AIErrorType.timeout,
+    AIErrorType.serverError,
+  ].contains(errorType);
 
   const AIServiceException(
     this.message, {
@@ -290,6 +290,5 @@ class AIServiceException implements Exception {
 /// Exception for offline-specific scenarios
 class OfflineException extends AIServiceException {
   const OfflineException([String message = 'Device is offline'])
-      : super(message, errorType: AIErrorType.offline);
+    : super(message, errorType: AIErrorType.offline);
 }
-

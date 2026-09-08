@@ -42,10 +42,8 @@ import 'game/dummy_world_game.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // ── Database & Repositories ─────────────────────────────
   final database = AppDatabase();
@@ -53,7 +51,7 @@ void main() async {
   final taskRepository = TaskRepositoryImpl(database);
   final lifeEventRepository = LifeEventRepositoryImpl(database);
   final genesisRepository = GenesisRepositoryImpl(database);
-  
+
   // ── AI Service ──────────────────────────────────────────
   final aiService = AIServiceImpl();
 
@@ -140,7 +138,7 @@ class OrBeitApp extends StatelessWidget {
         primaryColor: const Color(0xFFD4AF37),
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: const SecurityGateWrapper(), 
+      home: const SecurityGateWrapper(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -158,7 +156,8 @@ class SecurityGateWrapper extends ConsumerStatefulWidget {
   const SecurityGateWrapper({super.key});
 
   @override
-  ConsumerState<SecurityGateWrapper> createState() => _SecurityGateWrapperState();
+  ConsumerState<SecurityGateWrapper> createState() =>
+      _SecurityGateWrapperState();
 }
 
 class _SecurityGateWrapperState extends ConsumerState<SecurityGateWrapper> {
@@ -224,7 +223,10 @@ class DummyGameScreen extends StatelessWidget {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1A2E).withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(24),
@@ -234,10 +236,7 @@ class DummyGameScreen extends StatelessWidget {
                 ),
                 child: const Text(
                   'Tap to explore your world',
-                  style: TextStyle(
-                    color: Color(0xFF808080),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Color(0xFF808080), fontSize: 14),
                 ),
               ),
             ),
@@ -254,18 +253,20 @@ class LandingWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buildingRepo = ref.watch(buildingRepositoryProvider);
-    
+
     return FutureBuilder<List<Building>>(
       future: buildingRepo.getAllBuildings(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-             body: Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37))),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+            ),
           );
         }
 
         final hasBuildings = snapshot.data != null && snapshot.data!.isNotEmpty;
-        
+
         if (hasBuildings) {
           return const GameScreen();
         } else {
@@ -294,10 +295,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   /// Handle voice commands from the Or
   void _handleVoiceCommand(String command) async {
     final processor = ref.read(voiceCommandProcessorProvider);
-    
+
     // Process the voice command (parse → execute → speak)
     final result = await processor.processVoiceInput(command);
-    
+
     // Route UI based on what was executed
     if (result.executedIntent != null) {
       switch (result.executedIntent!) {
@@ -354,7 +355,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           GameWidget<WorldGame>(
             game: _game ??= WorldGame(buildingRepository: repository),
           ),
-          
+
           // Building selector panel
           if (_showBuildingSelector)
             Positioned(
@@ -365,7 +366,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 onClose: () => setState(() => _showBuildingSelector = false),
               ),
             ),
-          
+
           // Task panel (right side)
           if (_showTaskPanel)
             const Positioned(
@@ -374,7 +375,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               bottom: 0,
               child: TaskListPanel(),
             ),
-          
+
           // Life Event Timeline (right side)
           if (_showTimeline)
             const Positioned(
@@ -383,15 +384,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               bottom: 0,
               child: LifeEventTimeline(),
             ),
-          
+
           // The Or — voice-first AI beacon (bottom-right)
           Positioned(
             right: 24,
             bottom: 80,
-            child: OrBeacon(
-              size: 56,
-              onVoiceCommand: _handleVoiceCommand,
-            ),
+            child: OrBeacon(size: 56, onVoiceCommand: _handleVoiceCommand),
           ),
 
           // Reminder banner (top)
@@ -412,12 +410,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ),
 
           // Bottom toolbar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildToolbar(),
-          ),
+          Positioned(left: 0, right: 0, bottom: 0, child: _buildToolbar()),
         ],
       ),
     );
@@ -430,10 +423,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            const Color(0xFF1A1A2E).withAlpha(230),
-          ],
+          colors: [Colors.transparent, const Color(0xFF1A1A2E).withAlpha(230)],
         ),
       ),
       child: SafeArea(
@@ -487,7 +477,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   Future<void> _placeBuilding(BuildingType type) async {
     final repository = ref.read(buildingRepositoryProvider);
-    
+
     // Place at center of visible grid (simplified)
     final building = await repository.createBuilding(
       type: type.id,
@@ -497,15 +487,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // Add component to game
     _game?.add(BuildingComponent(building: building));
-    
+
     setState(() => _showBuildingSelector = false);
   }
 
   void _showAIDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => const AIArchitectDialog(),
-    );
+    showDialog(context: context, builder: (ctx) => const AIArchitectDialog());
   }
 }
 
@@ -529,9 +516,9 @@ class _ToolbarButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive 
-            ? const Color(0xFFD4AF37).withAlpha(50)
-            : Colors.transparent,
+          color: isActive
+              ? const Color(0xFFD4AF37).withAlpha(50)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive ? const Color(0xFFD4AF37) : Colors.white24,
@@ -539,7 +526,10 @@ class _ToolbarButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: isActive ? const Color(0xFFD4AF37) : Colors.white70),
+            Icon(
+              icon,
+              color: isActive ? const Color(0xFFD4AF37) : Colors.white70,
+            ),
             const SizedBox(width: 8),
             Text(
               label,

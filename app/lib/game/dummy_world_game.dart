@@ -1,7 +1,7 @@
 /// OrBeit Security — Dummy World Game
 ///
 /// A convincing but completely empty game world shown during duress mode.
-/// 
+///
 /// Design goals:
 /// - Looks like a real app that's barely been used
 /// - Has generic terrain, a few generic buildings
@@ -18,25 +18,26 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
 /// A minimal, convincing game world with no real data
-class DummyWorldGame extends FlameGame
-    with PanDetector, ScaleDetector {
+class DummyWorldGame extends FlameGame with PanDetector, ScaleDetector {
   late CameraComponent _cam;
 
   @override
   Future<void> onLoad() async {
     // Create a simple world with generic content
     final gameWorld = World();
-    
+
     // Add generic terrain
     gameWorld.add(_DummyTerrain());
-    
+
     // Add a couple of generic placeholder buildings
-    gameWorld.add(_DummyBuilding(
-      position: Vector2(100, 80),
-      label: 'Home',
-      color: const Color(0xFF4A6741),
-    ));
-    
+    gameWorld.add(
+      _DummyBuilding(
+        position: Vector2(100, 80),
+        label: 'Home',
+        color: const Color(0xFF4A6741),
+      ),
+    );
+
     // Camera setup — centered on the small world
     _cam = CameraComponent(world: gameWorld);
     _cam.viewfinder.zoom = 1.0;
@@ -52,7 +53,10 @@ class DummyWorldGame extends FlameGame
 
   @override
   void onScaleUpdate(ScaleUpdateInfo info) {
-    final newZoom = (_cam.viewfinder.zoom * info.scale.global.y).clamp(0.5, 2.5);
+    final newZoom = (_cam.viewfinder.zoom * info.scale.global.y).clamp(
+      0.5,
+      2.5,
+    );
     _cam.viewfinder.zoom = newZoom;
   }
 }
@@ -116,11 +120,7 @@ class _DummyBuilding extends PositionComponent {
     required Vector2 position,
     required this.label,
     required this.color,
-  }) : super(
-    position: position,
-    size: Vector2(60, 50),
-    priority: 10,
-  );
+  }) : super(position: position, size: Vector2(60, 50), priority: 10);
 
   @override
   void render(Canvas canvas) {
@@ -128,13 +128,11 @@ class _DummyBuilding extends PositionComponent {
 
     // Simple house shape
     final wallPaint = Paint()..color = color;
-    final roofPaint = Paint()..color = Color.lerp(color, const Color(0xFF000000), 0.3)!;
+    final roofPaint = Paint()
+      ..color = Color.lerp(color, const Color(0xFF000000), 0.3)!;
 
     // Walls
-    canvas.drawRect(
-      Rect.fromLTWH(5, 20, 50, 30),
-      wallPaint,
-    );
+    canvas.drawRect(Rect.fromLTWH(5, 20, 50, 30), wallPaint);
 
     // Roof triangle
     final roofPath = Path()

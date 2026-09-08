@@ -35,7 +35,8 @@ class DeviceCapabilities {
   });
 
   @override
-  String toString() => 'DeviceCapabilities('
+  String toString() =>
+      'DeviceCapabilities('
       'model: $model, os: $osVersion, '
       'physical: $isPhysicalDevice, '
       'biometrics: $canUseBiometrics, '
@@ -72,8 +73,7 @@ class DeviceCapabilityService {
 
     // iOS 18+ on A17 Pro+ or M-series likely supports Gemini Nano
     final majorVersion = int.tryParse(osVersion.split('.').first) ?? 0;
-    final isModernChip = model.contains('iPhone') ||
-        model.contains('iPad');
+    final isModernChip = model.contains('iPhone') || model.contains('iPad');
 
     return DeviceCapabilities(
       model: '${info.name} ($model)',
