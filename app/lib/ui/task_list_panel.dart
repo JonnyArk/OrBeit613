@@ -237,32 +237,55 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flatten heterogeneous list into Dart 3 records for O(1) lazy rendering without upfront allocation
+    final items = <({String type, dynamic data, int index})>[];
+    for (final entry in grouped.entries) {
+      items.add((type: 'header', data: {'priority': entry.key, 'count': entry.value.length}, index: 0));
+      for (var i = 0; i < entry.value.length; i++) {
+        items.add((type: 'task', data: entry.value[i], index: i));
+      }
+    }
+    if (_completedTasks.isNotEmpty) {
+      items.add((type: 'completed_spacing', data: null, index: 0));
+      items.add((type: 'completed_header', data: null, index: 0));
+      if (_showCompleted) {
+        for (var i = 0; i < _completedTasks.length; i++) {
+          items.add((type: 'completed_task', data: _completedTasks[i], index: i));
+        }
+      }
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        switch (item.type) {
+          case 'header':
+            final data = item.data as Map<String, dynamic>;
+            return _buildPriorityHeader(data['priority'] as domain.TaskPriority, data['count'] as int);
+          case 'task':
+            final task = item.data as domain.Task;
+            final widget = _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
+            );
+            // ⚡ Bolt: Cap staggered animation delay for lazily loaded items to prevent visual popping on fast scroll
+            final staggerDelay = item.index < 10 ? Duration(milliseconds: item.index * 40) : Duration.zero;
+            return widget.animate()
+                .fadeIn(duration: 300.ms, delay: staggerDelay)
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case 'completed_spacing':
+            return const SizedBox(height: 8);
+          case 'completed_header':
+            return _buildCompletedHeader();
+          case 'completed_task':
+            return _CompletedTaskTile(task: item.data as domain.Task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 
