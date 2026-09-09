@@ -1,0 +1,3 @@
+## 2023-10-26 - Dart 3 Records for Virtualized Lists
+**Learning:** In Flutter, passing pre-instantiated widgets into ListView.builder (or using a plain ListView) negates lazy-loading performance benefits and causes O(N) upfront allocations. Attempting to build an array of closures is also an anti-pattern. The most efficient way to virtualize heterogeneous lists is to map the data model into a flat list of items using Dart 3 records (e.g., `({String type, dynamic data, int index})`) and dynamically evaluate them inside the `itemBuilder` callback.
+**Action:** Always use Dart 3 records to flatten heterogeneous data and render lazily via ListView.builder, keeping staggered animation delays capped based on index to prevent visual popping.
