@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +36,24 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * Extracts and verifies the Firebase ID token from the request headers.
+ */
+async function verifyAuth(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Error verifying auth token", { error });
+        return null;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -118,7 +137,15 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authUserId = await verifyAuth(request as Request);
+            if (!authUserId) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: strictly overwrite payload identity to prevent IDOR
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +201,15 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authUserId = await verifyAuth(request as Request);
+            if (!authUserId) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: strictly overwrite payload identity to prevent IDOR
+            body.userId = authUserId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
