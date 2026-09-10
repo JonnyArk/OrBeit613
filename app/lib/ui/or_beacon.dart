@@ -60,27 +60,53 @@ class _OrBeaconState extends ConsumerState<OrBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      onLongPress: _handleLongPress,
-      child: SizedBox(
-        width: widget.size + 24, // Extra space for glow
-        height: widget.size + 24,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow ring
-            _buildGlowRing(),
-            // Ripple effect (when speaking)
-            if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
-            // Main orb
-            _buildOrb(),
-            // Status indicator
-            _buildStatusIndicator(),
-            // Partial text (when listening)
-            if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
-              _buildPartialText(),
-          ],
+    String semanticLabel;
+    switch (_voiceStatus) {
+      case VoiceStatus.idle:
+        semanticLabel = 'Activate voice assistant';
+        break;
+      case VoiceStatus.listening:
+        semanticLabel = 'Stop listening';
+        break;
+      case VoiceStatus.processing:
+        semanticLabel = 'Processing voice command';
+        break;
+      case VoiceStatus.speaking:
+        semanticLabel = 'Stop speaking';
+        break;
+      case VoiceStatus.error:
+        semanticLabel = 'Voice assistant error, activate to retry';
+        break;
+      case VoiceStatus.unavailable:
+        semanticLabel = 'Voice assistant unavailable';
+        break;
+    }
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: _handleTap,
+        onLongPress: _handleLongPress,
+        child: SizedBox(
+          width: widget.size + 24, // Extra space for glow
+          height: widget.size + 24,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer glow ring
+              _buildGlowRing(),
+              // Ripple effect (when speaking)
+              if (_voiceStatus == VoiceStatus.speaking) _buildRipples(),
+              // Main orb
+              _buildOrb(),
+              // Status indicator
+              _buildStatusIndicator(),
+              // Partial text (when listening)
+              if (_voiceStatus == VoiceStatus.listening && _partialText.isNotEmpty)
+                _buildPartialText(),
+            ],
+          ),
         ),
       ),
     );
