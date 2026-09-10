@@ -237,32 +237,54 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
+    // ⚡ Bolt: Map data models into a flat list for virtualized ListView.builder to prevent O(N) upfront widget allocations.
+    final items = <({String type, dynamic data, int index})>[];
+    for (final entry in grouped.entries) {
+      items.add((type: 'priority_header', data: entry.key, index: entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        items.add((type: 'active_task', data: entry.value[i], index: i));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      items.add((type: 'spacer', data: null, index: 0));
+      items.add((type: 'completed_header', data: null, index: 0));
+      if (_showCompleted) {
+        for (var i = 0; i < _completedTasks.length; i++) {
+          items.add((type: 'completed_task', data: _completedTasks[i], index: i));
+        }
+      }
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        switch (item.type) {
+          case 'priority_header':
+            return _buildPriorityHeader(item.data as domain.TaskPriority, item.index);
+          case 'active_task':
+            final task = item.data as domain.Task;
+            final taskIndex = item.index;
+            return _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: (taskIndex < 10 ? taskIndex : 0) * 40))
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case 'spacer':
+            return const SizedBox(height: 8);
+          case 'completed_header':
+            return _buildCompletedHeader();
+          case 'completed_task':
+            return _CompletedTaskTile(task: item.data as domain.Task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 
