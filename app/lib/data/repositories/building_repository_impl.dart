@@ -25,16 +25,17 @@ class BuildingRepositoryImpl implements BuildingRepository {
 
   @override
   Stream<List<domain.Building>> watchAllBuildings() {
-    return _database.select(_database.buildings).watch().map(
-      (rows) => rows.map(_toDomainBuilding).toList(),
-    );
+    return _database
+        .select(_database.buildings)
+        .watch()
+        .map((rows) => rows.map(_toDomainBuilding).toList());
   }
 
   @override
   Future<domain.Building?> getBuildingById(int id) async {
     final query = _database.select(_database.buildings)
       ..where((tbl) => tbl.id.equals(id));
-    
+
     final row = await query.getSingleOrNull();
     return row != null ? _toDomainBuilding(row) : null;
   }
@@ -46,14 +47,16 @@ class BuildingRepositoryImpl implements BuildingRepository {
     required double y,
     int rotation = 0,
   }) async {
-    final id = await _database.into(_database.buildings).insert(
-      BuildingsCompanion.insert(
-        type: type,
-        x: x,
-        y: y,
-        rotation: Value(rotation),
-      ),
-    );
+    final id = await _database
+        .into(_database.buildings)
+        .insert(
+          BuildingsCompanion.insert(
+            type: type,
+            x: x,
+            y: y,
+            rotation: Value(rotation),
+          ),
+        );
 
     return domain.Building(
       id: id,
@@ -67,9 +70,9 @@ class BuildingRepositoryImpl implements BuildingRepository {
 
   @override
   Future<domain.Building> updateBuilding(domain.Building building) async {
-    await (_database.update(_database.buildings)
-          ..where((tbl) => tbl.id.equals(building.id)))
-        .write(
+    await (_database.update(
+      _database.buildings,
+    )..where((tbl) => tbl.id.equals(building.id))).write(
       BuildingsCompanion(
         type: Value(building.type),
         x: Value(building.x),
@@ -83,9 +86,9 @@ class BuildingRepositoryImpl implements BuildingRepository {
 
   @override
   Future<bool> deleteBuilding(int id) async {
-    final count = await (_database.delete(_database.buildings)
-          ..where((tbl) => tbl.id.equals(id)))
-        .go();
+    final count = await (_database.delete(
+      _database.buildings,
+    )..where((tbl) => tbl.id.equals(id))).go();
     return count > 0;
   }
 
