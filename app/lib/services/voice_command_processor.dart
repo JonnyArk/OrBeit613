@@ -87,7 +87,8 @@ class VoiceCommandProcessor {
         return VoiceCommandResult(
           rawText: rawText,
           executedIntent: null,
-          spokenResponse: "I didn't understand that. Try 'build', 'tasks', or 'timeline'.",
+          spokenResponse:
+              "I didn't understand that. Try 'build', 'tasks', or 'timeline'.",
           success: false,
         );
     }
@@ -97,17 +98,37 @@ class VoiceCommandProcessor {
   /// Will be replaced with Gemini Nano on-device classification
   OrIntent _classifyIntent(String text) {
     // Building creation
-    if (_matches(text, ['build', 'create', 'add building', 'new building', 'construct'])) {
+    if (_matches(text, [
+      'build',
+      'create',
+      'add building',
+      'new building',
+      'construct',
+    ])) {
       return OrIntent.buildingCreate;
     }
 
     // Task management
-    if (_matches(text, ['task', 'todo', 'to do', 'add task', 'my tasks', 'show tasks'])) {
+    if (_matches(text, [
+      'task',
+      'todo',
+      'to do',
+      'add task',
+      'my tasks',
+      'show tasks',
+    ])) {
       return OrIntent.taskManage;
     }
 
     // Life events
-    if (_matches(text, ['event', 'log', 'record', 'timeline', 'history', 'life event'])) {
+    if (_matches(text, [
+      'event',
+      'log',
+      'record',
+      'timeline',
+      'history',
+      'life event',
+    ])) {
       return OrIntent.eventRecord;
     }
 

@@ -4,15 +4,7 @@
 /// Each type maps to a sprite asset for rendering.
 
 /// Available terrain types for the isometric world
-enum TerrainType {
-  grass,
-  grassDark,
-  road,
-  water,
-  dirtPath,
-  sand,
-  empty,
-}
+enum TerrainType { grass, grassDark, road, water, dirtPath, sand, empty }
 
 /// Maps terrain types to their sprite asset paths
 extension TerrainTypeSprite on TerrainType {
