@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Authentication on Cloud Functions v2 HTTP Endpoints
+**Vulnerability:** The Cloud Functions v2 `onRequest` endpoints (`generateAsset`, `distillContext`) lack authentication, exposing sensitive and potentially expensive AI operations (using `GOOGLE_AI_ULTRA_KEY`) to anyone on the internet, leading to unauthenticated access and potential resource exhaustion (credit draining).
+**Learning:** In Firebase Cloud Functions v2, `onRequest` endpoints do not have the built-in authentication context provided by `onCall` endpoints. Developers must manually extract the Bearer token from the `Authorization` header and verify it using `getAuth().verifyIdToken()`.
+**Prevention:** For any HTTP endpoint performing sensitive actions or utilizing rate-limited/paid resources, always explicitly implement authentication logic (e.g., verifying `Authorization` headers) or switch to `onCall` functions which handle authentication automatically.
