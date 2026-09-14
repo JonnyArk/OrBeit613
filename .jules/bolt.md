@@ -1,0 +1,3 @@
+## 2024-09-14 - Optimizing heterogeneous lists with ListView.builder in Flutter
+**Learning:** When passing pre-instantiated widgets into ListView or building an array of closures, it negates lazy-loading performance benefits, causing O(N) upfront allocations. To correctly virtualize heterogeneous lists, map the data model into a flat list of items (e.g., using Dart records) and dynamically evaluate them inside the `itemBuilder` callback. Also, cap staggered animation delays conditionally based on list position (e.g., `index < 10`) to avoid visual popping on lazily mounted items.
+**Action:** Use `ListView.builder` with a flattened record list for heterogeneous elements and cap animation stagger delays for items rendered outside the initial viewport.
