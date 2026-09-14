@@ -10,10 +10,32 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
+
+/**
+ * Authenticates a Firebase v2 onRequest by verifying the Bearer token.
+ * @param request The HTTP request object.
+ * @returns The decoded user ID.
+ * @throws Error if the token is missing or invalid.
+ */
+async function authenticateRequest(request: Request): Promise<string> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: Missing or invalid Authorization header");
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Authentication failed", { error });
+        throw new Error("Unauthorized: Invalid token");
+    }
+}
 
 // AI Services
 import {
@@ -76,8 +98,10 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        await authenticateRequest(request as Request);
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +142,11 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const userId = await authenticateRequest(request as Request);
+
             const body = request.body as AssetGenerationRequest;
+            // Force userId to match the authenticated user to prevent IDOR
+            body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +202,11 @@ export const distillContext = onRequest(
         }
 
         try {
+            const userId = await authenticateRequest(request as Request);
+
             const body = request.body as DistillationRequest;
+            // Force userId to match the authenticated user to prevent IDOR
+            body.userId = userId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
