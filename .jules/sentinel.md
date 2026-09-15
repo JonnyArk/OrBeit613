@@ -1,0 +1,4 @@
+## 2026-02-05 - Fix Missing Authentication and IDOR in onRequest Endpoints
+**Vulnerability:** The v2 Firebase functions `generateAsset`, `distillContext`, and `creditUsage` used `onRequest` without implementing authorization. This allowed unauthorized access to internal services. More critically, the system relied on the `userId` provided in the request payload, which could lead to Insecure Direct Object Reference (IDOR) vulnerabilities if an attacker provided someone else's `userId`.
+**Learning:** `onRequest` handlers in v2 Cloud Functions lack the built-in auth context provided by `onCall`. Developers must manually extract and verify the bearer token, and strictly use the server-verified UID instead of trusting user-provided input.
+**Prevention:** Always verify identity using `getAuth().verifyIdToken()` in `onRequest` endpoints and overwrite client-provided user IDs with the authenticated server-side user ID.
