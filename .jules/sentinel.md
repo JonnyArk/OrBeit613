@@ -1,0 +1,4 @@
+## 2025-03-05 - Fix missing authentication on AI endpoints
+**Vulnerability:** The `onRequest` Cloud Functions for generating assets and distilling context were completely unauthenticated, allowing any client to call them. Since these consume credits and access Google AI Ultra, this could lead to resource exhaustion and financial loss (billing attack).
+**Learning:** In Firebase Cloud Functions v2, `onRequest` endpoints do not have the built-in authentication context provided by `onCall` endpoints. Authentication must be handled manually by extracting the token from `request.headers.authorization` and verifying it with `getAuth().verifyIdToken()`.
+**Prevention:** Always verify if an endpoint is `onRequest` or `onCall`. For `onRequest` endpoints that perform sensitive or expensive operations, explicitly include token verification logic.
