@@ -11,7 +11,7 @@
 
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -24,8 +24,28 @@ import {
     type DistillationRequest,
 } from "./ai";
 
+import { getAuth } from "firebase-admin/auth";
+
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * Authenticates an incoming request by verifying the Authorization header token.
+ */
+async function authenticateRequest(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (error) {
+        logger.error("Error verifying auth token", { error });
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -117,8 +137,15 @@ export const generateAsset = onRequest(
             return;
         }
 
+        const userId = await authenticateRequest(request as Request);
+        if (!userId) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            body.userId = userId;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +200,15 @@ export const distillContext = onRequest(
             return;
         }
 
+        const userId = await authenticateRequest(request as Request);
+        if (!userId) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            body.userId = userId;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
