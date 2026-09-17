@@ -1,0 +1,3 @@
+## 2024-09-17 - Cap Stagger Delays in Virtualized Lists
+**Learning:** In Flutter, unconditionally applying staggered animations to items in a `ListView.builder` based on their index (e.g., `Duration(milliseconds: index * 50)`) undermines virtualized scrolling performance. For very large indices, the delay becomes massive, preventing items from appearing when lazily loaded and introducing significant visual popping, while also holding resources unnecessarily.
+**Action:** When adding staggered entry animations to `ListView.builder` items, explicitly cap the stagger delay to the first visible items (e.g., `index < 10 ? index * 50 : 0`). This preserves the initial visual flair without compromising the performance and behavior of lazy loading further down the list.
