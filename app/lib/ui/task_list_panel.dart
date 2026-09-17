@@ -998,12 +998,16 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
             ),
             const Spacer(),
             if (_dueDate != null)
-              GestureDetector(
-                onTap: () => setState(() => _dueDate = null),
-                child: Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white.withAlpha(60),
+              Semantics(
+                button: true,
+                label: 'Clear due date',
+                child: GestureDetector(
+                  onTap: () => setState(() => _dueDate = null),
+                  child: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.white.withAlpha(60),
+                  ),
                 ),
               )
             else
