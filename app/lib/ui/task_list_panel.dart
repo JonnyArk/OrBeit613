@@ -13,6 +13,24 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../domain/entities/task.dart' as domain;
 import '../providers/task_provider.dart';
 
+// ⚡ Bolt: Flatten nested data structures to enable ListView.builder virtualization
+abstract class _TaskListItem {}
+class _PriorityHeaderItem extends _TaskListItem {
+  final domain.TaskPriority priority;
+  final int count;
+  _PriorityHeaderItem(this.priority, this.count);
+}
+class _TaskItem extends _TaskListItem {
+  final domain.Task task;
+  final int index;
+  _TaskItem(this.task, this.index);
+}
+class _CompletedHeaderItem extends _TaskListItem {}
+class _CompletedTaskItem extends _TaskListItem {
+  final domain.Task task;
+  _CompletedTaskItem(this.task);
+}
+
 /// Task list panel widget
 class TaskListPanel extends ConsumerStatefulWidget {
   const TaskListPanel({super.key});
@@ -237,32 +255,51 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flatten heterogeneous data into a single list for O(1) virtualization
+    final items = <_TaskListItem>[];
+    for (final entry in grouped.entries) {
+      items.add(_PriorityHeaderItem(entry.key, entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        items.add(_TaskItem(entry.value[i], i));
+      }
+    }
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    if (_completedTasks.isNotEmpty) {
+      items.add(_CompletedHeaderItem());
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          items.add(_CompletedTaskItem(task));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        if (item is _PriorityHeaderItem) {
+          return _buildPriorityHeader(item.priority, item.count);
+        } else if (item is _TaskItem) {
+          // ⚡ Bolt: Cap stagger delay for initially visible items only to prevent popping
+          final delayMs = item.index < 10 ? item.index * 40 : 0;
+          return _SwipeableTaskTile(
+            task: item.task,
+            onComplete: () => _completeTask(item.task.id),
+            onDelete: () => _deleteTask(item.task.id),
+          ).animate()
+           .fadeIn(duration: 300.ms, delay: Duration(milliseconds: delayMs))
+           .slideX(begin: 0.05, end: 0, duration: 300.ms);
+        } else if (item is _CompletedHeaderItem) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _buildCompletedHeader(),
+          );
+        } else if (item is _CompletedTaskItem) {
+          return _CompletedTaskTile(task: item.task);
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
