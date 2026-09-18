@@ -1,0 +1,3 @@
+## 2024-05-24 - Virtualizing Heterogeneous Lists in Flutter
+**Learning:** Using `ListView` with a pre-built list of children causes O(N) upfront widget allocations. Attempting to fix this by building an array of closure builders is an anti-pattern that still does O(N) work and reduces readability. Additionally, staggered animations on lazily-loaded lists cause visual popping when scrolling.
+**Action:** Map the data model to a lightweight flat list of descriptive items, then dynamically evaluate them in `ListView.builder`'s `itemBuilder`. Cap staggered animation delays based on list position (e.g., `index < 10`) to preserve initial load aesthetics without breaking scroll behavior.
