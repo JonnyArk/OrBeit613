@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -26,6 +27,21 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * 🛡️ Sentinel: Authenticate HTTP endpoints missing onCall context.
+ * Extracts and verifies Bearer token from authorization header.
+ */
+async function getAuthUid(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) return null;
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        return (await getAuth().verifyIdToken(token)).uid;
+    } catch {
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,8 +92,14 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const uid = await getAuthUid(request);
+        if (!uid) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,7 +140,16 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const uid = await getAuthUid(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+
+            // 🛡️ Sentinel: Prevent IDOR by strictly overwriting userId with verified token identity
+            body.userId = uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +205,16 @@ export const distillContext = onRequest(
         }
 
         try {
+            const uid = await getAuthUid(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+
+            // 🛡️ Sentinel: Prevent IDOR by strictly overwriting userId with verified token identity
+            body.userId = uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
