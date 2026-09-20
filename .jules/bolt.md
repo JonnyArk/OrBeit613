@@ -1,0 +1,3 @@
+## 2024-09-20 - Flutter ListView Virtualization Anti-Pattern
+**Learning:** Passing pre-instantiated widgets or eager evaluating arrays of closures in `ListView.children` negates its lazy-loading performance benefits, causing O(N) upfront allocations. Staggered animations on lazily mounted items also cause visual popping if delays are not capped conditionally based on the list position.
+**Action:** Always map the data model into a flat list of heterogeneous items and dynamically evaluate them inside the `itemBuilder` callback of `ListView.builder`. Cap stagger animation delays based on list position (e.g. `index < 10`).
