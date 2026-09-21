@@ -275,7 +275,8 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                // ⚡ Bolt: Cap stagger delay to prevent visual pop-in on deferred load
+                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: (index < 10 ? index : 10) * 50))
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
