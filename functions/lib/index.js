@@ -44,6 +44,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
+const auth_1 = require("firebase-admin/auth");
 const app_1 = require("firebase-admin/app");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
@@ -133,8 +134,18 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Verify authentication token to prevent unauthorized access and AI credit abuse
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing authentication token" });
+        return;
+    }
     try {
+        const idToken = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
         const body = request.body;
+        // 🛡️ Sentinel: Prevent IDOR by securely overriding user ID from token
+        body.userId = decodedToken.uid;
         // Validate required fields
         if (!body.assetType || !body.context) {
             response.status(400).json({
@@ -180,8 +191,18 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Verify authentication token to prevent unauthorized access and AI credit abuse
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing authentication token" });
+        return;
+    }
     try {
+        const idToken = authHeader.split("Bearer ")[1];
+        const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
         const body = request.body;
+        // 🛡️ Sentinel: Prevent IDOR by securely overriding user ID from token
+        body.userId = decodedToken.uid;
         // Validate required fields
         if (!body.rawData || !body.dataType) {
             response.status(400).json({
