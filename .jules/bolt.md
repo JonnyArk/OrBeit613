@@ -1,0 +1,3 @@
+## 2024-09-23 - Virtualized heterogeneous lists in Flutter
+**Learning:** In Flutter, passing pre-instantiated widgets into ListView.builder negates its lazy-loading performance benefits. Attempting to optimize this by eagerly building an array of closures is an anti-pattern. To correctly virtualize heterogeneous lists, map the data model into a flat list of items and dynamically evaluate them inside the itemBuilder callback. Staggered animations should be capped.
+**Action:** Always flatten data into sealed classes/enums and use `switch` in `itemBuilder` for heterogeneous `ListView.builder`s instead of eagerly creating widgets.
