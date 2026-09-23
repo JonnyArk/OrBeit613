@@ -1,0 +1,4 @@
+## 2024-09-23 - Missing Auth and IDOR in v2 onRequest Endpoints
+**Vulnerability:** Firebase Cloud Functions v2 `onRequest` endpoints do not have built-in authentication context like `onCall`, and the AI endpoints (`generateAsset`, `distillContext`) trusted client-provided `userId`s in the payload, leading to an IDOR vulnerability and unauthenticated consumption of expensive AI credits.
+**Learning:** In v2 `onRequest` functions, authentication must be manually implemented by extracting and verifying the Bearer token from headers. Furthermore, server-side code should never trust client-provided identities.
+**Prevention:** Always manually authenticate `onRequest` endpoints using `getAuth().verifyIdToken()`, and strictly overwrite client-provided user IDs with the verified token's `uid` (e.g., `body.userId = decodedToken.uid;`).
