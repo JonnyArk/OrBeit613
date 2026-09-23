@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -26,6 +27,24 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * 🛡️ Sentinel: Authenticate request and prevent IDOR
+ * Extracts Bearer token and returns verified UID
+ */
+async function authenticateRequest(request: Request): Promise<string | null> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return null;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        const decodedToken = await getAuth().verifyIdToken(token);
+        return decodedToken.uid;
+    } catch (_error) {
+        return null;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -118,7 +137,15 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication and prevent IDOR
+            const uid = await authenticateRequest(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            body.userId = uid; // 🛡️ Sentinel: Strictly overwrite client-provided userId
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +201,15 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Enforce authentication and prevent IDOR
+            const uid = await authenticateRequest(request);
+            if (!uid) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            body.userId = uid; // 🛡️ Sentinel: Strictly overwrite client-provided userId
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
