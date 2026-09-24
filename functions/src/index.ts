@@ -10,8 +10,9 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Request } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -26,6 +27,25 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+/**
+ * 🛡️ Sentinel: Helper to enforce authentication on sensitive endpoints.
+ * Extracts the Bearer token from headers and verifies it using Firebase Auth
+ * to prevent unauthorized access and abuse of AI resources.
+ */
+async function verifyAuth(request: Request): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return false;
+    }
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+        await getAuth().verifyIdToken(idToken);
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,7 +96,13 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request: Request, response) => {
+    // 🛡️ Sentinel: Require authentication for viewing credit usage.
+    if (!(await verifyAuth(request))) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -110,10 +136,16 @@ export const creditUsage = onRequest(async (_request, response) => {
  */
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Enforce authentication to protect AI resources.
+        if (!(await verifyAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 
@@ -166,10 +198,16 @@ export const generateAsset = onRequest(
  */
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
-    async (request, response) => {
+    async (request: Request, response) => {
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Enforce authentication to protect AI resources.
+        if (!(await verifyAuth(request))) {
+            response.status(401).json({ error: "Unauthorized" });
             return;
         }
 

@@ -1,0 +1,4 @@
+## 2024-10-24 - Missing Authentication on Cloud Functions v2 onRequest Endpoints
+**Vulnerability:** The 'generateAsset', 'distillContext', and 'creditUsage' AI Cloud Functions were implemented using v2 'onRequest' without manually enforcing authentication, exposing sensitive functionality and paid AI resources to anonymous invocation.
+**Learning:** Unlike v1 or v2 'onCall' endpoints which automatically manage and provide authentication context, v2 'onRequest' HTTP endpoints lack this built-in protection. Developers must manually extract the Bearer token from the 'Authorization' header and verify it using Firebase Admin Auth to ensure endpoints are protected.
+**Prevention:** Always implement manual token verification for any sensitive or resource-intensive v2 'onRequest' Cloud Function, or consider migrating them to 'onCall' if they are only meant to be invoked directly from authenticated client applications.
