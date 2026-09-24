@@ -1,0 +1,3 @@
+## 2024-09-24 - Flattening Heterogeneous Lists for Virtualization
+**Learning:** In Flutter, passing pre-instantiated widgets into `ListView.builder` (or using `ListView` with many children) negates its lazy-loading performance benefits, causing O(N) upfront allocations. Eagerly building an array of closures is also an anti-pattern.
+**Action:** To correctly virtualize heterogeneous lists, map the data model into a flat list of simple record/enum types and dynamically evaluate them inside the `itemBuilder` callback. Capping staggered animations based on list position (e.g., `index < 10`) preserves visuals without causing popping.

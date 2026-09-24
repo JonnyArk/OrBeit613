@@ -237,32 +237,59 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flatten heterogeneous items into a list of records for lazy building
+    final flatList = <Record>[];
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    for (final entry in grouped.entries) {
+      flatList.add(('priority_header', entry.key, entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        flatList.add(('active_task', entry.value[i], i));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      flatList.add(('spacer',));
+      flatList.add(('completed_header',));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          flatList.add(('completed_task', task));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: flatList.length,
+      itemBuilder: (context, index) {
+        final item = flatList[index];
+
+        switch (item) {
+          case ('priority_header', final domain.TaskPriority priority, final int count):
+            return _buildPriorityHeader(priority, count);
+          case ('active_task', final domain.Task task, final int i):
+            final tile = _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
+            );
+
+            // ⚡ Bolt: Cap animations to the first 10 items to prevent popping on scroll
+            if (i < 10) {
+              return tile.animate()
+                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+            }
+            return tile;
+          case ('spacer',):
+            return const SizedBox(height: 8);
+          case ('completed_header',):
+            return _buildCompletedHeader();
+          case ('completed_task', final domain.Task task):
+            return _CompletedTaskTile(task: task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 
