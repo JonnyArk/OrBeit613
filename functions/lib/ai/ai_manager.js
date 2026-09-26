@@ -178,16 +178,25 @@ class AIManager {
      * @returns Promise resolving to total credits used this month
      */
     async getMonthlyUsage() {
+        // ⚡ Bolt: Use pre-calculated aggregate doc to avoid O(N) reads
         try {
             const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+            const doc = await aggregateRef.get();
+            if (doc.exists) {
+                const data = doc.data();
+                return data?.totalUsed || 0;
+            }
+            // Fallback for missing aggregate (e.g., historical data or before aggregation was added)
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
             const snapshot = await this.db
                 .collection(this.usageCollection)
                 .where("timestamp", ">=", monthStart)
                 .get();
             let total = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data();
+            snapshot.forEach((snapshotDoc) => {
+                const data = snapshotDoc.data();
                 total += data.creditsUsed || 0;
             });
             return total;
