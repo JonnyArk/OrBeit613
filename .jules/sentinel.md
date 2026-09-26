@@ -1,0 +1,4 @@
+## 2026-09-26 - Missing Auth & IDOR on AI Endpoints
+**Vulnerability:** Firebase v2 `onRequest` HTTP functions (`generateAsset` and `distillContext`) lacked built-in authentication, allowing unauthenticated public access and IDOR (trusting client-provided `userId` in the payload).
+**Learning:** Unlike `onCall` functions, `onRequest` functions in Firebase v2 do not automatically authenticate users. They expose raw Express-like requests, meaning Bearer tokens must be manually extracted, verified via `firebase-admin/auth`, and used to strictly override client-provided user IDs.
+**Prevention:** Always manually extract and verify `authorization` headers on `onRequest` endpoints, and explicitly overwrite user identifiers in request bodies with the verified `uid` from the decoded token to prevent spoofing and IDOR.
