@@ -559,46 +559,54 @@ class _PinGateScreenState extends State<PinGateScreen>
   }
 
   Widget _buildKey(String label, {required VoidCallback onTap, bool highlight = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: highlight
-              ? const Color(0xFFD4AF37).withValues(alpha: 0.2)
-              : const Color(0xFF1A1A2E),
-          border: Border.all(
+    String semanticLabel = label;
+    if (label == '⌫') semanticLabel = 'Backspace';
+    if (label == '✓') semanticLabel = 'Submit';
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
             color: highlight
-                ? const Color(0xFFD4AF37)
-                : const Color(0xFFD4AF37).withValues(alpha: 0.15),
-            width: highlight ? 2 : 1,
+                ? const Color(0xFFD4AF37).withValues(alpha: 0.2)
+                : const Color(0xFF1A1A2E),
+            border: Border.all(
+              color: highlight
+                  ? const Color(0xFFD4AF37)
+                  : const Color(0xFFD4AF37).withValues(alpha: 0.15),
+              width: highlight ? 2 : 1,
+            ),
           ),
-        ),
-        child: Center(
-          child: label == '⌫'
-              ? const Icon(
-                  Icons.backspace_outlined,
-                  color: Color(0xFF808080),
-                  size: 22,
-                )
-              : label == '✓'
-                  ? Icon(
-                      Icons.check,
-                      color: highlight
-                          ? const Color(0xFFD4AF37)
-                          : const Color(0xFF808080),
-                      size: 28,
-                    )
-                  : Text(
-                      label,
-                      style: const TextStyle(
-                        color: Color(0xFFE0E0E0),
-                        fontSize: 28,
-                        fontWeight: FontWeight.w300,
+          child: Center(
+            child: label == '⌫'
+                ? const Icon(
+                    Icons.backspace_outlined,
+                    color: Color(0xFF808080),
+                    size: 22,
+                  )
+                : label == '✓'
+                    ? Icon(
+                        Icons.check,
+                        color: highlight
+                            ? const Color(0xFFD4AF37)
+                            : const Color(0xFF808080),
+                        size: 28,
+                      )
+                    : Text(
+                        label,
+                        style: const TextStyle(
+                          color: Color(0xFFE0E0E0),
+                          fontSize: 28,
+                          fontWeight: FontWeight.w300,
+                        ),
                       ),
-                    ),
+          ),
         ),
       ),
     );
