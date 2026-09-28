@@ -183,6 +183,15 @@ export class AIManager {
     async getMonthlyUsage(): Promise<number> {
         try {
             const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+
+            const aggregateDoc = await aggregateRef.get();
+            if (aggregateDoc.exists) {
+                // ⚡ Bolt: O(1) read instead of O(N) query for performance
+                return aggregateDoc.data()?.totalUsed || 0;
+            }
+
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
             const snapshot = await this.db
