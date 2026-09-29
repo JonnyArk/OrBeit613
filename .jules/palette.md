@@ -1,0 +1,3 @@
+## 2024-03-22 - Use IconButton over GestureDetector for icon-only buttons
+**Learning:** Using `GestureDetector` for icon-only buttons in Flutter strips away essential accessibility features like screen reader labels (tooltips), focus states for keyboard navigation, and adequate touch targets, making the app harder to use for accessibility-reliant users.
+**Action:** Always replace icon-only `GestureDetector` widgets with `IconButton`. Use `tooltip` for semantics, `padding: EdgeInsets.zero`, and `constraints: const BoxConstraints()` to preserve visual layout while natively providing keyboard accessibility and screen reader labels.
