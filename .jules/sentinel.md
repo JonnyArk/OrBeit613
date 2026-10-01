@@ -1,0 +1,4 @@
+## 2025-02-05 - Missing Auth in Cloud Functions onRequest Endpoints
+**Vulnerability:** Missing authentication and Insecure Direct Object Reference (IDOR) on Cloud Functions `onRequest` endpoints (`generateAsset`, `distillContext`). Unauthenticated users can trigger credit-costing AI operations, and potentially pass arbitrary `userId`s to charge credits to other users.
+**Learning:** In Firebase Cloud Functions v2, `onRequest` endpoints do not have the built-in authentication context provided by `onCall`. Developers assumed authentication was handled by the framework.
+**Prevention:** Manually extract and verify the Bearer token using `getAuth().verifyIdToken()` from `firebase-admin/auth` for all `onRequest` endpoints handling sensitive or costly operations. Always overwrite client-provided `userId`s with the verified `uid` from the token.
