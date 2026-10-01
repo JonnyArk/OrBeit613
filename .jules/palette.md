@@ -1,0 +1,3 @@
+## 2024-10-24 - Replace Icon-only GestureDetector with IconButton
+**Learning:** Found multiple instances where `GestureDetector` was used to wrap an `Icon` for a tap action in Flutter UI files (e.g., `app/lib/ui/life_event_timeline.dart`, `app/lib/ui/task_list_panel.dart`). This is bad for accessibility because `GestureDetector` doesn't provide keyboard focus states, semantics (like labels for screen readers), or native touch feedback like `IconButton` does.
+**Action:** Replace `GestureDetector(child: Icon(...))` with `IconButton(icon: Icon(...), onPressed: ..., padding: EdgeInsets.zero, constraints: const BoxConstraints(), tooltip: '...',)` when the layout relies on tight spacing, to preserve visual design while adding accessibility features.
