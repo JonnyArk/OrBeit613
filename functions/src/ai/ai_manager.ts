@@ -183,6 +183,19 @@ export class AIManager {
     async getMonthlyUsage(): Promise<number> {
         try {
             const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
+
+            // ⚡ Bolt: Use O(1) aggregate read instead of O(N) query for performance
+            const doc = await aggregateRef.get();
+            if (doc.exists) {
+                const data = doc.data();
+                if (data && typeof data.totalUsed === "number") {
+                    return data.totalUsed;
+                }
+            }
+
+            // Fallback to O(N) query if aggregate doesn't exist yet
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
             const snapshot = await this.db
@@ -213,6 +226,7 @@ export class AIManager {
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const aggregateRef = this.db.doc(`metadata/credits/monthly/${monthKey}`);
 
+        // ⚡ Bolt: Maintain aggregate for O(1) reads in getMonthlyUsage
         await aggregateRef.set(
             {
                 totalUsed: FieldValue.increment(creditsToAdd),
