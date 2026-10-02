@@ -1,0 +1,3 @@
+## 2026-10-02 - Replace O(N) Firestore Queries with Pre-existing Aggregate Docs
+**Learning:** Found an O(N) Firestore query counting credit usage per month when a pre-existing O(1) monthly aggregate document was already being maintained in the write path (`updateMonthlyAggregate`).
+**Action:** When calculating aggregate counts or sums in Firestore, always check if an aggregate document is already being updated elsewhere. If so, read the aggregate document (O(1)) instead of querying the collection (O(N)), making sure to provide a fallback to the O(N) query if the aggregate document doesn't exist yet.
