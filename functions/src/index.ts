@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,7 +119,17 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Verify authentication to prevent unauthorized AI credit usage
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            const decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: Overwrite userId to prevent IDOR vulnerabilities
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +185,17 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Verify authentication to prevent unauthorized AI credit usage
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            const decodedToken = await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: Overwrite userId to prevent IDOR vulnerabilities
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
