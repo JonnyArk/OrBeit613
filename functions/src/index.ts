@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -117,8 +118,25 @@ export const generateAsset = onRequest(
             return;
         }
 
+        let decodedToken;
+        try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+                return;
+            }
+            const idToken = authHeader.split("Bearer ")[1];
+            decodedToken = await getAuth().verifyIdToken(idToken);
+        } catch (error) {
+            logger.warn("Authentication failed", { error });
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided ID with verified token UID
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -173,8 +191,25 @@ export const distillContext = onRequest(
             return;
         }
 
+        let decodedToken;
+        try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+                return;
+            }
+            const idToken = authHeader.split("Bearer ")[1];
+            decodedToken = await getAuth().verifyIdToken(idToken);
+        } catch (error) {
+            logger.warn("Authentication failed", { error });
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         try {
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided ID with verified token UID
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
