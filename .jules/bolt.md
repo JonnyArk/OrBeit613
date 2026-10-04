@@ -1,0 +1,3 @@
+## 2023-10-27 - True UI Virtualization in Heterogeneous Lists
+**Learning:** In Flutter, eagerly building children in a standard `ListView` (especially when mapping nested loops of distinct widget types like headers and tiles) causes significant memory bloat and initialization lag for large datasets. `ListView.builder` only works effectively if the multi-layered data model is first explicitly flattened into a single list of distinct object records.
+**Action:** Always flatten hierarchical or nested list data into a 1D `List<Object>` before passing it to `ListView.builder`, utilizing Dart 3 switch statements and records to maintain type safety and correctly instantiate heterogeneous widgets on demand.
