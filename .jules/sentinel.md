@@ -1,0 +1,4 @@
+## 2025-05-18 - Missing Authentication Context in onRequest Endpoints
+**Vulnerability:** Firebase Cloud Functions v2 onRequest endpoints were publicly exposed without authentication checks, allowing unauthenticated API requests and arbitrary execution of cost-bearing AI endpoints leading to Denial of Wallet risks, as well as IDOR via client-provided user IDs.
+**Learning:** In Firebase v2, onRequest endpoints lack built-in auth context compared to onCall. They must extract Bearer tokens from the Authorization header manually and use getAuth().verifyIdToken(). Also, relying on user IDs passed directly in the payload enables IDOR.
+**Prevention:** Always implement manual token extraction and verification for onRequest endpoints. Never trust client-provided user IDs; explicitly overwrite payload identity fields with the verified decoded token uid.
