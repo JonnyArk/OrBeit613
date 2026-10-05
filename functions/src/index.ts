@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -120,6 +121,24 @@ export const generateAsset = onRequest(
         try {
             const body = request.body as AssetGenerationRequest;
 
+            // 🛡️ Sentinel: Missing authentication on sensitive endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            try {
+                const token = authHeader.split("Bearer ")[1];
+                const decodedToken = await getAuth().verifyIdToken(token);
+                // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided userId
+                body.userId = decodedToken.uid;
+            } catch (authError) {
+                logger.error("Authentication failed", { error: authError });
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             // Validate required fields
             if (!body.assetType || !body.context) {
                 response.status(400).json({
@@ -175,6 +194,24 @@ export const distillContext = onRequest(
 
         try {
             const body = request.body as DistillationRequest;
+
+            // 🛡️ Sentinel: Missing authentication on sensitive endpoint
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            try {
+                const token = authHeader.split("Bearer ")[1];
+                const decodedToken = await getAuth().verifyIdToken(token);
+                // 🛡️ Sentinel: Prevent IDOR by overwriting user-provided userId
+                body.userId = decodedToken.uid;
+            } catch (authError) {
+                logger.error("Authentication failed", { error: authError });
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
