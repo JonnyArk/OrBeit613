@@ -1,0 +1,4 @@
+## 2025-02-24 - Fix Insecure Direct Object Reference (IDOR) via Client-Provided User ID
+**Vulnerability:** The `generateAsset` and `distillContext` `onRequest` Cloud Functions endpoints blindly trusted the `userId` field provided in the client's HTTP request body (e.g., `const body = request.body as AssetGenerationRequest;` with no validation of `userId`).
+**Learning:** `onRequest` functions, unlike `onCall`, do not automatically verify user authentication or provide context. Trusting client payloads for user identification enables IDOR, allowing attackers to act on behalf of other users, consume their quotas, or view their cached data.
+**Prevention:** Always extract and verify the authorization token (e.g., `Bearer token`) explicitly in `onRequest` endpoints using `getAuth().verifyIdToken()`. Never trust client-provided IDs; forcibly overwrite payload IDs with the verified UID from the token.
