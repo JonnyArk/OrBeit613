@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,7 +119,25 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            const token = authHeader.split("Bearer ")[1];
+            let decodedToken;
+            try {
+                decodedToken = await getAuth().verifyIdToken(token);
+            } catch (error) {
+                logger.error("Token verification failed", { error });
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: Enforce server-side identity to prevent IDOR
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +193,25 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            const token = authHeader.split("Bearer ")[1];
+            let decodedToken;
+            try {
+                decodedToken = await getAuth().verifyIdToken(token);
+            } catch (error) {
+                logger.error("Token verification failed", { error });
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: Enforce server-side identity to prevent IDOR
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
