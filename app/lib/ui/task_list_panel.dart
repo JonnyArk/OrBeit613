@@ -237,32 +237,45 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flattening data models into a single linear list
+    // to enable true lazy loading and virtualization via ListView.builder
+    final flattenedList = <Object>[];
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+    for (final entry in grouped.entries) {
+      flattenedList.add(('priority_header', entry.key, entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        flattenedList.add(('active_task', entry.value[i], i));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      flattenedList.add(('spacer',));
+      flattenedList.add(('completed_header',));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          flattenedList.add(('completed_task', task));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: flattenedList.length,
+      itemBuilder: (context, index) {
+        final item = flattenedList[index];
+        return switch (item) {
+          ('priority_header', final domain.TaskPriority priority, final int count) => _buildPriorityHeader(priority, count),
+          ('active_task', final domain.Task task, final int i) => _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
+            ).animate().fadeIn(duration: 300.ms, delay: Duration(milliseconds: (i < 10 ? i : 0) * 40)).slideX(begin: 0.05, end: 0, duration: 300.ms),
+          ('spacer',) => const SizedBox(height: 8),
+          ('completed_header',) => _buildCompletedHeader(),
+          ('completed_task', final domain.Task task) => _CompletedTaskTile(task: task),
+          _ => const SizedBox.shrink(),
+        };
+      },
     );
   }
 
