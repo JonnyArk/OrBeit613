@@ -1,0 +1,4 @@
+## 2023-10-24 - Unauthenticated Cloud Functions & IDOR
+**Vulnerability:** Firebase v2 `onRequest` endpoints (`generateAsset` and `distillContext`) lacked authentication checks and relied on client-provided `userId` in the request body for tracking/caching.
+**Learning:** Unlike `onCall` functions, `onRequest` HTTP endpoints do not automatically verify user authentication or provide an auth context in Firebase v2. Relying on client-provided `userId` without validation leads to Insecure Direct Object Reference (IDOR) vulnerabilities, as users can pass arbitrary IDs.
+**Prevention:** Always manually extract the Bearer token from `request.headers.authorization`, verify it using `getAuth().verifyIdToken()`, and strictly overwrite the payload's user ID with the verified identity extracted from the token (`body.userId = decodedToken.uid`).
