@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -118,7 +119,18 @@ export const generateAsset = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Verify authentication token and prevent IDOR
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing token" });
+                return;
+            }
+            const token = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(token);
+
             const body = request.body as AssetGenerationRequest;
+            // 🛡️ Sentinel: Override client-provided userId with verified identity
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.assetType || !body.context) {
@@ -174,7 +186,18 @@ export const distillContext = onRequest(
         }
 
         try {
+            // 🛡️ Sentinel: Verify authentication token and prevent IDOR
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized: Missing token" });
+                return;
+            }
+            const token = authHeader.split("Bearer ")[1];
+            const decodedToken = await getAuth().verifyIdToken(token);
+
             const body = request.body as DistillationRequest;
+            // 🛡️ Sentinel: Override client-provided userId with verified identity
+            body.userId = decodedToken.uid;
 
             // Validate required fields
             if (!body.rawData || !body.dataType) {
