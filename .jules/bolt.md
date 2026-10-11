@@ -1,0 +1,3 @@
+## 2023-10-11 - True Virtualization for Heterogeneous Lists in Flutter
+**Learning:** In Flutter, building a single UI view that mixes headers and multiple types of data models (e.g., date headers and timeline events) inside a `ListView` by eagerly mapping them to `Column` widgets breaks lazy loading and destroys memory performance.
+**Action:** Always flatten heterogeneous data configurations (like nested arrays or conditionally injected headers) into a single linear list of typed data objects (like Dart 3 Records). Then use `ListView.builder` with pattern matching on the data model to lazily construct widgets only as they scroll into view.
