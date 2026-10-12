@@ -1,0 +1,3 @@
+## 2024-05-15 - ListView Optimization in Flutter
+**Learning:** In Flutter, when using `ListView` to render heterogeneous lists (e.g., mixing headers and task items) or potentially large lists, eager instantiation of widgets can cause unnecessary re-renders and layout passes. The `ListView` widget instantiates all its children at once.
+**Action:** Always use `ListView.builder` for dynamically sized lists. Flatten the underlying data models into a single linear list (e.g., `List<Object>`) rather than eagerly instantiating the widgets. The `itemBuilder` should then read the data model at the given index and return the appropriately instantiated widget on demand to ensure true lazy loading and virtualization.

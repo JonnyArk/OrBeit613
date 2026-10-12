@@ -237,32 +237,58 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
+    // ⚡ Bolt: Flatten data models into a single linear list to avoid
+    // eager instantiation of all widgets at once.
+    final listItems = <Object>[];
+
+    // Priority groups
+    for (final entry in grouped.entries) {
+      listItems.add(('priority_header', entry.key, entry.value.length));
+      for (var i = 0; i < entry.value.length; i++) {
+        listItems.add(('active_task', entry.value[i], i));
+      }
+    }
+
+    // Completed section (collapsible)
+    if (_completedTasks.isNotEmpty) {
+      listItems.add('completed_spacing');
+      listItems.add('completed_header');
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          listItems.add(('completed_task', task));
+        }
+      }
+    }
+
+    // ⚡ Bolt: Use ListView.builder for true lazy loading and virtualization.
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
+      itemCount: listItems.length,
+      itemBuilder: (context, index) {
+        final item = listItems[index];
+        switch (item) {
+          case ('priority_header', final domain.TaskPriority priority, final int count):
+            return _buildPriorityHeader(priority, count);
+          case ('active_task', final domain.Task task, _):
+            return _SwipeableTaskTile(
+              task: task,
+              onComplete: () => _completeTask(task.id),
+              onDelete: () => _deleteTask(task.id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
-
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
-        ],
-      ],
+                // ⚡ Bolt: Removed index-based delay to prevent sluggishness when scrolling lazily loaded lists
+                .fadeIn(duration: 300.ms)
+                .slideX(begin: 0.05, end: 0, duration: 300.ms);
+          case 'completed_spacing':
+            return const SizedBox(height: 8);
+          case 'completed_header':
+            return _buildCompletedHeader();
+          case ('completed_task', final domain.Task task):
+            return _CompletedTaskTile(task: task);
+          default:
+            return const SizedBox.shrink();
+        }
+      },
     );
   }
 
