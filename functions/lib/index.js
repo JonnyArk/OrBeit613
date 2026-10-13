@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -97,7 +98,20 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // 🛡️ Sentinel: Authenticate onRequest endpoint manually to prevent unauthorized AI credit usage.
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch (error) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -131,6 +145,19 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    // 🛡️ Sentinel: Authenticate onRequest endpoint manually to prevent unauthorized AI credit usage.
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch (error) {
+        response.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
@@ -178,6 +205,19 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    // 🛡️ Sentinel: Authenticate onRequest endpoint manually to prevent unauthorized AI credit usage.
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch (error) {
+        response.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
