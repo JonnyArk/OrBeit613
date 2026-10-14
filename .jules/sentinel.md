@@ -1,0 +1,4 @@
+## 2026-02-13 - [Missing Authentication on Firebase v2 onRequest Endpoints]
+**Vulnerability:** The AI-related HTTP endpoints (`creditUsage`, `generateAsset`, `distillContext`) built with `onRequest` (Firebase Functions v2) were completely public and unauthenticated, lacking any identity verification or Bearer token checks.
+**Learning:** In Firebase Cloud Functions v2, `onRequest` endpoints do not have built-in authentication context or automatic request filtering (unlike `onCall` endpoints). Developers mistakenly assumed the functions were secure simply by virtue of being deployed, leaving the AI credits system open to abuse.
+**Prevention:** To secure `onRequest` HTTP endpoints, always manually extract the Bearer token from `request.headers.authorization` and explicitly verify it using `getAuth().verifyIdToken()` from `firebase-admin/auth`, ensuring to catch and handle unauthenticated states appropriately (returning a `401 Unauthorized`).

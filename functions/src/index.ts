@@ -10,8 +10,10 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, type Request } from "firebase-functions/v2/https";
+import type { Response } from "express";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -29,6 +31,23 @@ initializeApp();
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
+
+// 🛡️ Sentinel: Verify Firebase Auth token for onRequest endpoints
+async function verifyAuth(request: Request, response: Response): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        return true;
+    } catch (error) {
+        logger.error("Auth verification failed", { error });
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+}
 
 // Global options for cost control and security
 setGlobalOptions({
@@ -76,7 +95,8 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    if (!(await verifyAuth(request, response as unknown as Response))) return;
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -116,6 +136,8 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await verifyAuth(request, response as unknown as Response))) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -172,6 +194,8 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await verifyAuth(request, response as unknown as Response))) return;
 
         try {
             const body = request.body as DistillationRequest;
