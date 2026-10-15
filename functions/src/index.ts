@@ -10,9 +10,30 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function verifyAuth(request: any, response: any): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        // 🛡️ Sentinel: Secure endpoint by requiring Bearer token
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        // 🛡️ Sentinel: Verify token validity securely without leaking details
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch (_error) {
+        // 🛡️ Sentinel: Fail securely on invalid token, do not leak internal stack traces
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+}
 import * as logger from "firebase-functions/logger";
 
 // AI Services
@@ -77,6 +98,9 @@ export const healthCheck = onRequest(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 export const creditUsage = onRequest(async (_request, response) => {
+    // 🛡️ Sentinel: Verify authentication before processing the request
+    if (!(await verifyAuth(_request, response))) return;
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -116,6 +140,9 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        // 🛡️ Sentinel: Verify authentication before processing the request
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -172,6 +199,9 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        // 🛡️ Sentinel: Verify authentication before processing the request
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as DistillationRequest;
