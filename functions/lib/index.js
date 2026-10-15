@@ -45,9 +45,30 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function verifyAuth(request, response) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        // 🛡️ Sentinel: Secure endpoint by requiring Bearer token
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        // 🛡️ Sentinel: Verify token validity securely without leaking details
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+        return true;
+    }
+    catch (_error) {
+        // 🛡️ Sentinel: Fail securely on invalid token, do not leak internal stack traces
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+}
 const logger = __importStar(require("firebase-functions/logger"));
 // AI Services
 const ai_1 = require("./ai");
@@ -98,6 +119,9 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
 exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+    // 🛡️ Sentinel: Verify authentication before processing the request
+    if (!(await verifyAuth(_request, response)))
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,6 +157,9 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Verify authentication before processing the request
+    if (!(await verifyAuth(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -180,6 +207,9 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    // 🛡️ Sentinel: Verify authentication before processing the request
+    if (!(await verifyAuth(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
