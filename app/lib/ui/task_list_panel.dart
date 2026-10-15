@@ -250,7 +250,7 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
               onDelete: () => _deleteTask(entry.value[i].id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .fadeIn(duration: 300.ms) // ⚡ Bolt: Removed index-based delay to improve scroll performance
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 
