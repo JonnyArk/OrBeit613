@@ -1,0 +1,4 @@
+## 2024-05-01 - Firebase onRequest Authentication Gap
+**Vulnerability:** Firebase Cloud Functions v2 `onRequest` HTTP endpoints do not have built-in authentication context (unlike `onCall` functions), leaving sensitive endpoints like `creditUsage`, `generateAsset`, and `distillContext` unauthenticated and vulnerable to unauthorized access.
+**Learning:** `onRequest` functions require manual token extraction and verification from the `Authorization` header. Unhandled promise rejections during token verification can crash the function or leak internal stack traces.
+**Prevention:** Always manually extract the Bearer token from `request.headers.authorization` and verify it using `getAuth().verifyIdToken()` wrapped in a `try...catch` block returning a 401 response for all `onRequest` endpoints handling sensitive operations.

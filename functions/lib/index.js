@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -53,6 +54,24 @@ const logger = __importStar(require("firebase-functions/logger"));
 const ai_1 = require("./ai");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
+// 🛡️ Sentinel: Helper to verify authentication on onRequest endpoints
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const verifyAuth = async (request, response) => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await (0, auth_1.getAuth)().verifyIdToken(token);
+        return true;
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+};
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
 // Global options for cost control and security
@@ -97,7 +116,9 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    if (!(await verifyAuth(request, response)))
+        return;
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -133,6 +154,8 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    if (!(await verifyAuth(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
@@ -180,6 +203,8 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
         response.status(405).json({ error: "Method not allowed" });
         return;
     }
+    if (!(await verifyAuth(request, response)))
+        return;
     try {
         const body = request.body;
         // Validate required fields
