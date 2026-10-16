@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -26,6 +27,24 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+// 🛡️ Sentinel: Helper to verify authentication on onRequest endpoints
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const verifyAuth = async (request: any, response: any): Promise<boolean> => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+};
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,7 +95,8 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    if (!(await verifyAuth(request, response))) return;
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -116,6 +136,8 @@ export const generateAsset = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as AssetGenerationRequest;
@@ -172,6 +194,8 @@ export const distillContext = onRequest(
             response.status(405).json({ error: "Method not allowed" });
             return;
         }
+
+        if (!(await verifyAuth(request, response))) return;
 
         try {
             const body = request.body as DistillationRequest;
