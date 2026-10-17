@@ -1,0 +1,3 @@
+## 2024-05-23 - Avoid index-based stagger delays in lazily loaded lists
+**Learning:** In Flutter, using index-based stagger delays (e.g., `delay: Duration(milliseconds: i * 40)`) on animations within lazily loaded list items (like those in `ListView.builder` or dynamically generated items in a standard `ListView`) causes visual sluggishness during scrolling as new items are delayed unnecessarily based on their absolute index.
+**Action:** Remove index-based delays in list item animations, especially inside lazily built or generated lists. Let them animate in based on when they are built/appear on screen rather than their index position in the entire list.
