@@ -1,0 +1,3 @@
+## 2024-05-15 - Replaced icon-only GestureDetector with IconButton
+**Learning:** Found multiple instances where `GestureDetector` was used with a single `Icon` to create clickable buttons (like delete buttons or clear date buttons). This pattern lacks keyboard accessibility (can't tab to it or press Enter), focus states, and screen reader labels.
+**Action:** Replaced icon-only `GestureDetector` widgets with `IconButton` (using `tooltip` for semantics, `padding: EdgeInsets.zero`, and `constraints: const BoxConstraints()` to preserve layout), ensuring native Flutter accessibility support without altering visual layout.
