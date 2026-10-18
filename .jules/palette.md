@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility improvements for icon-only GestureDetectors
+**Learning:** Using `GestureDetector` directly for icon-only actions (like close buttons or radio buttons) lacks native keyboard accessibility, focus states, screen reader labels, and touch targets required by WCAG. Flutter's `IconButton` provides this accessibility context automatically.
+**Action:** Always replace icon-only `GestureDetector` widgets with `IconButton(onPressed: ..., icon: Icon(...), tooltip: '...', padding: EdgeInsets.zero, constraints: const BoxConstraints())` to ensure full accessibility without altering visual layout.
