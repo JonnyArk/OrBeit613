@@ -249,8 +249,9 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
               onComplete: () => _completeTask(entry.value[i].id),
               onDelete: () => _deleteTask(entry.value[i].id),
             )
+                // ⚡ Bolt: Removed index-based delay to prevent sluggishness during scrolling
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .fadeIn(duration: 300.ms)
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 
