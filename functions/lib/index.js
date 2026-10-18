@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.distillContext = exports.generateAsset = exports.creditUsage = exports.healthCheck = void 0;
 const app_1 = require("firebase-admin/app");
+const auth_1 = require("firebase-admin/auth");
 const v2_1 = require("firebase-functions/v2");
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
@@ -71,7 +72,20 @@ const googleAIUltraKey = (0, params_1.defineSecret)("GOOGLE_AI_ULTRA_KEY");
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/healthCheck
  * // Response: { "status": "healthy", "project": "orbeit-613", "timestamp": "..." }
  */
-exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
+exports.healthCheck = (0, https_1.onRequest)(async (request, response) => {
+    // 🛡️ Sentinel: Add authentication check to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     logger.info("Health check requested", { structuredData: true });
     const aiManager = (0, ai_1.getAIManager)();
     const usageSummary = await aiManager.getUsageSummary();
@@ -97,7 +111,20 @@ exports.healthCheck = (0, https_1.onRequest)(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-exports.creditUsage = (0, https_1.onRequest)(async (_request, response) => {
+exports.creditUsage = (0, https_1.onRequest)(async (request, response) => {
+    // 🛡️ Sentinel: Add authentication check to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         const aiManager = (0, ai_1.getAIManager)();
         const summary = await aiManager.getUsageSummary();
@@ -131,6 +158,19 @@ exports.generateAsset = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] }, 
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    // 🛡️ Sentinel: Add authentication check to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
@@ -178,6 +218,19 @@ exports.distillContext = (0, https_1.onRequest)({ secrets: [googleAIUltraKey] },
     // Only allow POST
     if (request.method !== "POST") {
         response.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    // 🛡️ Sentinel: Add authentication check to prevent unauthorized access
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        await (0, auth_1.getAuth)().verifyIdToken(authHeader.split("Bearer ")[1]);
+    }
+    catch {
+        response.status(401).json({ error: "Unauthorized" });
         return;
     }
     try {
