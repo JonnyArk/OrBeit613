@@ -244,13 +244,14 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
         for (final entry in grouped.entries) ...[
           _buildPriorityHeader(entry.key, entry.value.length),
           for (var i = 0; i < entry.value.length; i++)
+            // ⚡ Bolt: Removed index-based stagger delay to prevent visual sluggishness for later items
             _SwipeableTaskTile(
               task: entry.value[i],
               onComplete: () => _completeTask(entry.value[i].id),
               onDelete: () => _deleteTask(entry.value[i].id),
             )
                 .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
+                .fadeIn(duration: 300.ms)
                 .slideX(begin: 0.05, end: 0, duration: 300.ms),
         ],
 

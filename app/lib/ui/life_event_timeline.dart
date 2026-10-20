@@ -268,6 +268,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
         return Column(
           children: [
             if (showDateHeader) _buildDateHeader(event.occurredAt),
+            // ⚡ Bolt: Removed index-based stagger delay to prevent visual sluggishness during scrolling
             _TimelineEventCard(
               event: event,
               isFirst: isFirst,
@@ -275,7 +276,7 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               onDelete: () => _deleteEvent(event.id),
             )
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms)
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
