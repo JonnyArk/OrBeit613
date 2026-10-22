@@ -1,0 +1,3 @@
+## 2024-05-13 - Staggered Animations in Lazy Lists
+**Learning:** Adding index-based staggered delays (e.g., `delay: Duration(milliseconds: i * 40)`) to `flutter_animate` animations inside lazily loaded list items (`ListView.builder`) causes UI sluggishness during fast scrolling, as the delays compound unexpectedly on newly built items rather than just the initial load.
+**Action:** Remove index-based delays from animations inside `ListView.builder` items. If a staggered entry effect is desired, it must be carefully scoped to the initial page load (e.g., by checking a flag) or handled by a higher-level list animation widget, rather than blindly applying `index * delay` on every item build.
