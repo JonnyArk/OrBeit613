@@ -161,13 +161,14 @@ class _ReminderBannerState extends State<ReminderBanner>
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: _dismiss,
-                  child: const Icon(
-                    Icons.close,
-                    color: Color(0xFF808080),
-                    size: 16,
-                  ),
+                IconButton(
+                  onPressed: _dismiss,
+                  icon: const Icon(Icons.close),
+                  color: const Color(0xFF808080),
+                  iconSize: 16,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Dismiss reminder',
                 ),
               ],
             ),
