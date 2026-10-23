@@ -1,0 +1,4 @@
+## 2024-10-23 - Add authentication to sensitive API endpoints
+**Vulnerability:** The `creditUsage`, `generateAsset`, and `distillContext` functions in `functions/src/index.ts` were exposed publicly without authentication, allowing anyone to exhaust AI credits and perform unauthorized actions.
+**Learning:** In Firebase Cloud Functions v2, `onRequest` HTTP endpoints do not have built-in authentication context (unlike `onCall` functions).
+**Prevention:** To secure `onRequest` HTTP endpoints, always manually extract the Bearer token from `request.headers.authorization` and verify it using `getAuth().verifyIdToken()` from `firebase-admin/auth`. Always wrap the verification in a `try...catch` block that returns a `401 Unauthorized` response to prevent unhandled promise rejections from crashing the function or leaking internal stack traces.
