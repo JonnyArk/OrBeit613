@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -76,8 +77,20 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
     try {
+        const authHeader = request.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+        } catch {
+            response.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
 
@@ -118,6 +131,18 @@ export const generateAsset = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            try {
+                await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as AssetGenerationRequest;
 
             // Validate required fields
@@ -174,6 +199,18 @@ export const distillContext = onRequest(
         }
 
         try {
+            const authHeader = request.headers.authorization;
+            if (!authHeader?.startsWith("Bearer ")) {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+            try {
+                await getAuth().verifyIdToken(authHeader.split("Bearer ")[1]);
+            } catch {
+                response.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
             const body = request.body as DistillationRequest;
 
             // Validate required fields
