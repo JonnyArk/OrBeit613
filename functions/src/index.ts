@@ -10,6 +10,7 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -26,6 +27,25 @@ import {
 
 // Initialize Firebase Admin
 initializeApp();
+
+// 🛡️ Sentinel: Helper to enforce authentication on sensitive endpoints
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function requireAuth(request: any, response: any): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+    const token = authHeader.split("Bearer ")[1];
+    try {
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch {
+        response.status(401).json({ error: "Unauthorized" });
+        return false;
+    }
+}
+
 
 // Define secrets (set via: firebase functions:secrets:set SECRET_NAME)
 const googleAIUltraKey = defineSecret("GOOGLE_AI_ULTRA_KEY");
@@ -76,7 +96,8 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    if (!(await requireAuth(request, response))) return;
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -111,6 +132,7 @@ export const creditUsage = onRequest(async (_request, response) => {
 export const generateAsset = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+    if (!(await requireAuth(request, response))) return;
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
@@ -167,6 +189,7 @@ export const generateAsset = onRequest(
 export const distillContext = onRequest(
     { secrets: [googleAIUltraKey] },
     async (request, response) => {
+    if (!(await requireAuth(request, response))) return;
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
