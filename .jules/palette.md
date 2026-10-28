@@ -1,0 +1,3 @@
+## 2024-10-28 - Improve Accessibility of Icon-Only GestureDetectors
+**Learning:** Found several `GestureDetector` widgets with icon-only children acting as interactive buttons (e.g., delete buttons, close buttons) in the Flutter app's UI elements like `TaskListPanel`, `ReminderBanner`, and `LifeEventTimeline`. These lack semantic labels and native focus/hover states, degrading accessibility for screen readers and keyboard navigation.
+**Action:** Replace icon-only `GestureDetector` widgets with `IconButton`. Use `tooltip` to provide semantic labels for screen readers, and configure `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()` to maintain visual layout while gaining native accessibility benefits.
