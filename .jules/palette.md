@@ -1,0 +1,3 @@
+## 2024-10-29 - Accessibility in Flutter Icon Buttons
+**Learning:** Icon-only `GestureDetector` widgets in Flutter lack built-in accessibility features (like semantic labels and focus states) and keyboard support. Replacing them with `IconButton` widgets provides native keyboard accessibility, focus states, clear tap feedback, and screen reader labels. To maintain visual layout, set `padding: EdgeInsets.zero` and `constraints: const BoxConstraints()`.
+**Action:** Always use `IconButton` with a `tooltip` for icon-only interactive elements in Flutter instead of `GestureDetector` wrapped around an `Icon`.

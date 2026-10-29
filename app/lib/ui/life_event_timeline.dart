@@ -522,13 +522,14 @@ class _TimelineEventCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: onDelete,
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.white.withAlpha(40),
-                          ),
+                        IconButton(
+                          onPressed: onDelete,
+                          icon: const Icon(Icons.close),
+                          iconSize: 14,
+                          color: Colors.white.withAlpha(40),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Delete event',
                         ),
                       ],
                     ),
