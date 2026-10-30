@@ -237,32 +237,44 @@ class _TaskListPanelState extends ConsumerState<TaskListPanel> {
 
     final grouped = _groupedActive;
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        // Priority groups
-        for (final entry in grouped.entries) ...[
-          _buildPriorityHeader(entry.key, entry.value.length),
-          for (var i = 0; i < entry.value.length; i++)
-            _SwipeableTaskTile(
-              task: entry.value[i],
-              onComplete: () => _completeTask(entry.value[i].id),
-              onDelete: () => _deleteTask(entry.value[i].id),
-            )
-                .animate()
-                .fadeIn(duration: 300.ms, delay: Duration(milliseconds: i * 40))
-                .slideX(begin: 0.05, end: 0, duration: 300.ms),
-        ],
+    // ⚡ Bolt: Flatten heterogeneous list data into widget builders to use ListView.builder for optimized rendering without losing type safety
+    final itemBuilders = <Widget Function()>[];
 
-        // Completed section (collapsible)
-        if (_completedTasks.isNotEmpty) ...[
+    for (final entry in grouped.entries) {
+      itemBuilders.add(() => _buildPriorityHeader(entry.key, entry.value.length));
+      for (final task in entry.value) {
+        itemBuilders.add(() => _SwipeableTaskTile(
+          task: task,
+          onComplete: () => _completeTask(task.id),
+          onDelete: () => _deleteTask(task.id),
+        )
+            // ⚡ Bolt: removed index-based stagger delay in ListView.builder for smoother scrolling
+            .animate()
+            .fadeIn(duration: 300.ms)
+            .slideX(begin: 0.05, end: 0, duration: 300.ms));
+      }
+    }
+
+    if (_completedTasks.isNotEmpty) {
+      itemBuilders.add(() => Column(
+        children: [
           const SizedBox(height: 8),
           _buildCompletedHeader(),
-          if (_showCompleted)
-            for (final task in _completedTasks)
-              _CompletedTaskTile(task: task),
         ],
-      ],
+      ));
+      if (_showCompleted) {
+        for (final task in _completedTasks) {
+          itemBuilders.add(() => _CompletedTaskTile(task: task));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: itemBuilders.length,
+      itemBuilder: (context, index) {
+        return itemBuilders[index]();
+      },
     );
   }
 
