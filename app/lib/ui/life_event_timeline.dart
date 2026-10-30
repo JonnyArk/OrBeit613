@@ -274,8 +274,9 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
               isLast: isLast,
               onDelete: () => _deleteEvent(event.id),
             )
+                // ⚡ Bolt: removed index-based stagger delay in ListView.builder for smoother scrolling
                 .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
+                .fadeIn(duration: 400.ms)
                 .slideX(begin: 0.1, end: 0, duration: 400.ms),
           ],
         );
