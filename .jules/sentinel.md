@@ -1,0 +1,4 @@
+## 2024-11-02 - Securing Unauthenticated Firebase Cloud Functions
+**Vulnerability:** Found multiple sensitive Firebase HTTP endpoints (`creditUsage`, `generateAsset`, `distillContext`) lacking user authentication, exposing them to unauthorized access and potential abuse of paid AI services.
+**Learning:** In Firebase, `onRequest` endpoints do not inherit authentication context automatically like `onCall` endpoints do. Without explicit token verification, these endpoints are publicly accessible by default.
+**Prevention:** Always extract the `Authorization` Bearer token and manually verify it using `getAuth().verifyIdToken()` in `onRequest` endpoints handling sensitive operations, while carefully wrapping it in a `try...catch { ... }` block (omitting unused error variables for ESLint) that returns a `401 Unauthorized` response.
