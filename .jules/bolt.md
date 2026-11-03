@@ -1,0 +1,3 @@
+## 2024-05-30 - Lazy Evaluation in Heterogeneous Flutter Lists
+**Learning:** When using `ListView.builder` to optimize heterogeneous lists (e.g., mixing headers, task items, and collapsible sections), caching the widgets directly in a `List<Widget>` array or building them eagerly inside `build()` defeats the purpose of `ListView.builder` by evaluating them upfront.
+**Action:** Flatten the underlying data models into a single linear list (e.g., `List<Object>`). Avoid caching it in a parallel mutable state variable. Alternatively, map the data into a list of lightweight closures (e.g., `List<Widget Function()>`) to be called by `itemBuilder`. This preserves lazy evaluation without eagerly instantiating the widgets.
