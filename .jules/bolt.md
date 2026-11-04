@@ -1,0 +1,3 @@
+## 2024-11-04 - Optimize ListView with Lazy Evaluation in Flutter
+**Learning:** Using a standard `ListView` with a large number of children evaluates all of them eagerly, which can cause frame jank. Replacing it with `ListView.builder` allows lazy evaluation. For heterogeneous items (e.g. headers and lists), one can construct a list of lightweight closures (`List<Widget Function()>`) synchronously in the build method and call them in the `itemBuilder` to preserve lazy instantiation without complex state management.
+**Action:** When building heterogeneous lists in Flutter, use `ListView.builder` combined with a flattened list of closure builders instead of a basic `ListView`.
