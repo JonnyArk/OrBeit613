@@ -1,0 +1,3 @@
+## 2024-11-05 - IconButton Accessibility Overrides
+**Learning:** When replacing `GestureDetector` wrappers with `IconButton` in Flutter to improve keyboard and screen reader accessibility (which uses the `tooltip` property identically to `aria-label`), default `IconButton` padding and constraints often cause unwanted visual layout shifts by adding extra space.
+**Action:** Always apply `padding: EdgeInsets.zero`, `constraints: const BoxConstraints()`, and a matching `splashRadius` (e.g., 16 or 24) when migrating icon-only `GestureDetector`s to `IconButton`s to strictly preserve the exact original visual footprint while unlocking native interactive accessibility.
