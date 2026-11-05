@@ -250,36 +250,33 @@ class _LifeEventTimelineState extends ConsumerState<LifeEventTimeline> {
       );
     }
 
+    // ⚡ Bolt: Flatten heterogeneous lists into lightweight closures for ListView.builder
+    // to improve scroll performance and avoid unnecessary Column wrappers.
+    final items = <Widget Function()>[];
+    for (int i = 0; i < _events.length; i++) {
+      final event = _events[i];
+      final isFirst = i == 0;
+      final isLast = i == _events.length - 1;
+
+      if (isFirst || !_isSameDay(_events[i - 1].occurredAt, event.occurredAt)) {
+        items.add(() => _buildDateHeader(event.occurredAt));
+      }
+
+      items.add(() => _TimelineEventCard(
+            event: event,
+            isFirst: isFirst,
+            isLast: isLast,
+            onDelete: () => _deleteEvent(event.id),
+          )
+              .animate()
+              .fadeIn(duration: 400.ms, delay: Duration(milliseconds: i * 50))
+              .slideX(begin: 0.1, end: 0, duration: 400.ms));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      itemCount: _events.length,
-      itemBuilder: (context, index) {
-        final event = _events[index];
-        final isFirst = index == 0;
-        final isLast = index == _events.length - 1;
-
-        // Check if we need a date separator
-        final showDateHeader = isFirst ||
-            !_isSameDay(
-              _events[index - 1].occurredAt,
-              event.occurredAt,
-            );
-
-        return Column(
-          children: [
-            if (showDateHeader) _buildDateHeader(event.occurredAt),
-            _TimelineEventCard(
-              event: event,
-              isFirst: isFirst,
-              isLast: isLast,
-              onDelete: () => _deleteEvent(event.id),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms, delay: Duration(milliseconds: index * 50))
-                .slideX(begin: 0.1, end: 0, duration: 400.ms),
-          ],
-        );
-      },
+      itemCount: items.length,
+      itemBuilder: (context, index) => items[index](),
     );
   }
 
