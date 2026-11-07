@@ -1,0 +1,4 @@
+## 2025-02-05 - Add Missing Authentication Checks on Firebase Cloud Functions
+**Vulnerability:** Firebase onRequest endpoints (creditUsage, generateAsset, distillContext) were completely unauthenticated and accessible to anyone.
+**Learning:** These endpoints were created with cost controls via global options, but were still missing token verification allowing any internet user to invoke potentially expensive AI operations (using Google AI Ultra). I learned it is critical to always require and verify id tokens on these endpoints, but to exclude the healthCheck endpoint which must remain public for uptime monitoring.
+**Prevention:** Ensure that all non-healthCheck Firebase HTTP onRequest functions implement token validation (getAuth().verifyIdToken()) before performing business logic or calling AI services.
