@@ -1,0 +1,3 @@
+## 2024-11-07 - Use ListView.builder for heterogeneous task lists
+**Learning:** In Flutter, eagerly evaluating large heterogeneous lists with `ListView(children: [...])` blocks the UI thread during initial render and consumes unnecessary memory, especially when mixing items with layout headers and complex animations. This happens frequently when converting design mockups directly to code.
+**Action:** Always map heterogeneous list items (headers, elements, separators) into an array of lightweight closures (`List<Widget Function()>`) and use `ListView.builder` to preserve lazy evaluation while maintaining clean grouping logic without parallel mutable lists.
