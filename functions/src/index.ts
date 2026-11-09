@@ -48,6 +48,8 @@ setGlobalOptions({
  * // Response: { "status": "healthy", "project": "orbeit-613", "timestamp": "..." }
  */
 export const healthCheck = onRequest(async (_request, response) => {
+    // ⚡ Bolt: Cache health check response briefly to prevent unnecessary database queries when pinged repeatedly by monitors.
+    response.set("Cache-Control", "public, max-age=15, s-maxage=30");
     logger.info("Health check requested", { structuredData: true });
 
     const aiManager = getAIManager();
