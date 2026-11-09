@@ -1,0 +1,4 @@
+## 2024-11-09 - Unauthenticated Firebase HTTP Endpoints
+**Vulnerability:** Multiple Firebase HTTP endpoints (creditUsage, generateAsset, distillContext) were entirely unauthenticated and missing authorization checks, exposing sensitive AI functionality and credit consumption functionality to the public internet.
+**Learning:** Firebase onRequest HTTP functions are open to the public by default. If relying on Bearer token verification, it must be explicitly checked and safely caught in a try...catch block to prevent unhandled promise rejections.
+**Prevention:** For Firebase HTTP endpoints (onRequest), explicitly check for and verify authentication using getAuth().verifyIdToken(), ensuring a robust try...catch wrapper. Alternatively, consider using onCall which has built-in context authentication context if a raw HTTP interface is not strictly required.
