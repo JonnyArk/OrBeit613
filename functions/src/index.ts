@@ -10,8 +10,10 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
+import type { Request, Response } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 
@@ -35,6 +37,32 @@ setGlobalOptions({
     maxInstances: 10,
     region: "us-central1",
 });
+
+/**
+ * 🛡️ Sentinel: Verifies the Bearer token from the Authorization header.
+ * Uses try...catch to prevent unhandled promise rejections and safely return 401.
+ *
+ * @param request - The incoming HTTP request
+ * @param response - The HTTP response object
+ * @returns boolean - True if authenticated, false otherwise
+ */
+async function verifyRequestAuth(request: Request, response: Response): Promise<boolean> {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized: Missing authentication token" });
+        return false;
+    }
+
+    try {
+        const token = authHeader.split("Bearer ")[1];
+        await getAuth().verifyIdToken(token);
+        return true;
+    } catch (error) {
+        logger.warn("Authentication failed", { error: error instanceof Error ? error.message : "Unknown error" });
+        response.status(401).json({ error: "Unauthorized: Invalid authentication token" });
+        return false;
+    }
+}
 
 /**
  * Health check endpoint for monitoring service availability.
@@ -76,7 +104,12 @@ export const healthCheck = onRequest(async (_request, response) => {
  * @example
  * // GET https://us-central1-orbeit-613.cloudfunctions.net/creditUsage
  */
-export const creditUsage = onRequest(async (_request, response) => {
+export const creditUsage = onRequest(async (request, response) => {
+    // 🛡️ Sentinel: Enforce authentication to prevent unauthorized usage monitoring
+    if (!(await verifyRequestAuth(request, response))) {
+        return;
+    }
+
     try {
         const aiManager = getAIManager();
         const summary = await aiManager.getUsageSummary();
@@ -114,6 +147,11 @@ export const generateAsset = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI asset generation
+        if (!(await verifyRequestAuth(request, response))) {
             return;
         }
 
@@ -170,6 +208,11 @@ export const distillContext = onRequest(
         // Only allow POST
         if (request.method !== "POST") {
             response.status(405).json({ error: "Method not allowed" });
+            return;
+        }
+
+        // 🛡️ Sentinel: Enforce authentication to prevent unauthorized AI context distillation
+        if (!(await verifyRequestAuth(request, response))) {
             return;
         }
 
