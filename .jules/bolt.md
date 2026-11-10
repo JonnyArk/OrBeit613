@@ -1,0 +1,3 @@
+## 2024-11-10 - O(N) operations in build()
+**Learning:** In Flutter, never perform synchronous O(N) operations (e.g., using for loops to flatten data into lists of closures or Widgets) inside the build() method for ListView or ListView.builder. This creates unnecessary overhead and lags the UI. Data flattening or mapping must be handled outside build() (e.g., via memoized providers), or use proper lazy instantiation by utilizing the original data lists directly inside the itemBuilder.
+**Action:** Avoid expensive computations, looping logic, list filtering, mapping and list concatenation inside the `build()` function of widgets, in particular inside ListViews and ListView.builder. Move the operations outside build method using provider logic or memoizing.
